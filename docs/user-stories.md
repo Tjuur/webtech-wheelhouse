@@ -22,8 +22,6 @@ As a counter staff member, I want to register a bike and link it to a customer, 
 
 As a counter staff member, I want to be able to write the specifications of any given bike, including a serial number, so that we can correctly identify any bike even if there are two very similar bikes.
 
-* User is not specified.
-
 
 ### US-03 Bike photos
 
@@ -92,4 +90,4 @@ As an owner, I want to update the service price list without changing the prices
 
 ### US-13 Walllist prices
 
-As an owner, I want the prices to be readily available on the website, so that the customers don't have to call to know them.
+As a customer, I want the service prices to be readily available on the website, so that I don't have to call the shop to know them.

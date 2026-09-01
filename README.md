@@ -28,5 +28,20 @@ PostgreSQL must be running locally, and the PostgreSQL user must have permission
 Clone the repository:
 
 ```bash
-git clone <REPOSITORY-URL>
+git clone https://github.com/Tjuur/webtech-wheelhouse.git
 cd webtech-wheelhouse
+```
+
+Install dependencies and create:
+
+```bash
+bundle install
+npm install
+bin/rails db:create
+```
+
+Run 
+
+```bash
+bin/dev
+```

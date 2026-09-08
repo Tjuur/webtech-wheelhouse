@@ -2,66 +2,88 @@
 
 ## Diagram Image
 
-![Wheelhouse Domain Model](images/wheelhouseDiagram.png)
+![Wheelhouse domain model](domain-model.png)
 
 ## Diagram Code
 
 ```dbml
 Table customers {
-  id integer [pk, increment]
-  name varchar
-  phone varchar
+  id bigint [pk, increment]
+  name varchar [not null]
+  phone varchar [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
 }
 
 Table bikes {
-  id integer [pk, increment]
-  customer_id integer [not null]
-  make varchar
-  model varchar
-  serial_number varchar [unique]
+  id bigint [pk, increment]
+  customer_id bigint [not null]
+  make varchar [not null]
+  model varchar [not null]
+  colour varchar [not null]
+  serial_number varchar [not null, unique]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
 }
 
-Table mechanics {
-  id integer [pk, increment]
-  name varchar
+Table staffs {
+  id bigint [pk, increment]
+  name varchar [not null]
+  role varchar [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
 }
 
 Table repairs {
-  id integer [pk, increment]
-  bike_id integer [not null]
-  mechanic_id integer [not null]
-  description text
-  status varchar
+  id bigint [pk, increment]
+  bike_id bigint [not null]
+  staff_id bigint
+  status varchar [not null, default: 'Received']
   approval_status varchar
-  promised_date date
-}
-
-Table photos {
-  id integer [pk, increment]
-  repair_id integer [not null]
-  image_reference varchar
+  promised_on date
+  quoted_at timestamp
+  handed_back_at timestamp
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
 }
 
 Table services {
-  id integer [pk, increment]
-  name varchar
-  current_price decimal
+  id bigint [pk, increment]
+  name varchar [not null, unique]
+  current_price decimal(8,2) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
 }
 
 Table repair_services {
-  id integer [pk, increment]
-  repair_id integer [not null]
-  service_id integer [not null]
-  charged_price decimal
+  id bigint [pk, increment]
+  repair_id bigint [not null]
+  service_id bigint [not null]
+  charged_price decimal(8,2) [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
 }
 
 Ref: bikes.customer_id > customers.id
 Ref: repairs.bike_id > bikes.id
-Ref: repairs.mechanic_id > mechanics.id
-Ref: photos.repair_id > repairs.id
+Ref: repairs.staff_id >? staffs.id
 Ref: repair_services.repair_id > repairs.id
 Ref: repair_services.service_id > services.id
 ```
+
+## Changes since Lab 3
+
+- Replaced `mechanics` with `staffs` and added `role` so the database can represent both mechanics and the counter worker.
+- Added `colour` to bikes to support distinguishing otherwise identical bikes.
+- Renamed `mechanic_id` to `staff_id`; it is nullable because a mechanic may not yet be assigned when a repair is received.
+- Renamed `promised_date` to `promised_on` because it represents a calendar day.
+- Added `quoted_at` to record when a repair quote was given.
+- Added `handed_back_at` to record when a bike was actually returned to its customer.
+- Removed `description` from repairs because written diagnosis data is deferred until Lab 9.
+- Removed the `photos` table because photo storage is deferred until Lab 9.
+- Added Rails timestamps (`created_at` and `updated_at`) to every table.
+- Added the required NOT NULL constraints, unique indexes, and decimal precision for monetary values.
+- Foreign key constraints are not included because they are deferred to Lab 7.
 
 ## Repair Lifecycle
 
@@ -98,15 +120,14 @@ The `status` attribute records the repair's current lifecycle state. The `approv
 
 ## Entity Justification
 
-| Entity | User stories |
-|---|---|
-| Customer | US-01 — Bike registration |
-| Bike | US-01 — Bike registration; US-02 — Bike identification |
-| Mechanic | US-04 — Bike problem description; US-06 — Bike status: workable |
-| Repair | US-04 — Bike problem description; US-08 — Bike status: finished |
-| Photo | US-03 — Bike photos |
-| Service | US-05 — Repairs needed; US-13 — Walllist prices |
-| RepairService | US-05 — Repairs needed; US-12 — Flexible pricing |
+| Entity        | User stories                                                    |
+| ------------- | --------------------------------------------------------------- |
+| Customer      | US-01 — Bike registration                                       |
+| Bike          | US-01 — Bike registration; US-02 — Bike identification          |
+| Staff         | US-04 — Bike problem description; US-06 — Bike status: workable |
+| Repair        | US-04 — Bike problem description; US-08 — Bike status: finished |
+| Service       | US-05 — Repairs needed; US-13 — Walllist prices                 |
+| RepairService | US-05 — Repairs needed; US-12 — Flexible pricing                |
 
 ## The Thing and the Copy of the Thing
 

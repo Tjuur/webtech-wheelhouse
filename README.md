@@ -18,10 +18,10 @@ Before running Wheelhouse, make sure the following are installed:
 - Ruby 4.0.4
 - Rails 8.0
 - Node.js 26.1.0
-- npm
+- Yarn
 - PostgreSQL
 
-PostgreSQL must be running locally, and the PostgreSQL user must have permission to create databases.
+PostgreSQL must be running locally, and the PostgreSQL role used by the application must have permission to create databases.
 
 ## Setup
 
@@ -32,16 +32,33 @@ git clone https://github.com/Tjuur/webtech-wheelhouse.git
 cd webtech-wheelhouse
 ```
 
-Install dependencies and create:
+Install dependencies:
 
 ```bash
 bundle install
-npm install
-bin/rails db:create
+yarn install
 ```
 
-Run 
+Create the database, load the schema, and seed the development data:
+
+```bash
+bin/rails db:setup
+```
+
+Run the application:
 
 ```bash
 bin/dev
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+The services page is available at:
+
+```text
+http://localhost:3000/services
 ```

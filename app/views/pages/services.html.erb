@@ -13,8 +13,8 @@
   <tbody>
     <% @services.each do |service| %>
       <tr>
-        <td><%= service[:name] %></td>
-        <td>$<%= service[:price] %></td>
+        <td><%= service.name %></td>
+        <td>$<%= service.current_price %></td>
       </tr>
     <% end %>
   </tbody>

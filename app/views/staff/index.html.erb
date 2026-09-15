@@ -1,0 +1,19 @@
+<h1>Staff</h1>
+
+<% if @staff.any? %>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Role</th>
+        <th></th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <%= render partial: "staff/staff", collection: @staff, as: :staff %>
+    </tbody>
+  </table>
+<% else %>
+  <p>No staff found.</p>
+<% end %>

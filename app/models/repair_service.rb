@@ -1,3 +1,4 @@
-# app/models/repair_service.rb
 class RepairService < ApplicationRecord
+  belongs_to :repair
+  belongs_to :service
 end

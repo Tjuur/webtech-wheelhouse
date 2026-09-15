@@ -1,0 +1,19 @@
+<h1>Customers</h1>
+
+<% if @customers.any? %>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th></th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <%= render @customers %>
+    </tbody>
+  </table>
+<% else %>
+  <p>No customers found.</p>
+<% end %>

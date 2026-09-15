@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_09_08_154657) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_15_183421) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -22,6 +22,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_08_154657) do
     t.string "serial_number", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["customer_id"], name: "index_bikes_on_customer_id"
     t.index ["serial_number"], name: "index_bikes_on_serial_number", unique: true
   end
 
@@ -38,6 +39,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_08_154657) do
     t.decimal "charged_price", precision: 8, scale: 2, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["repair_id"], name: "index_repair_services_on_repair_id"
+    t.index ["service_id"], name: "index_repair_services_on_service_id"
   end
 
   create_table "repairs", force: :cascade do |t|
@@ -50,6 +53,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_08_154657) do
     t.datetime "handed_back_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["bike_id"], name: "index_repairs_on_bike_id"
+    t.index ["staff_id"], name: "index_repairs_on_staff_id"
   end
 
   create_table "services", force: :cascade do |t|
@@ -66,4 +71,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_09_08_154657) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
+
+  add_foreign_key "bikes", "customers"
+  add_foreign_key "repair_services", "repairs"
+  add_foreign_key "repair_services", "services"
+  add_foreign_key "repairs", "bikes"
+  add_foreign_key "repairs", "staffs"
 end

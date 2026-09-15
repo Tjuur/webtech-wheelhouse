@@ -1,0 +1,12 @@
+<tr>
+  <td><%= bike.make %></td>
+  <td><%= bike.model %></td>
+  <td><%= bike.colour %></td>
+  <td><%= bike.serial_number %></td>
+  <td>
+    <%= link_to bike.customer.name, customer_path(bike.customer) %>
+  </td>
+  <td>
+    <%= link_to "View", bike_path(bike), class: "btn btn-primary btn-sm" %>
+  </td>
+</tr>

@@ -1,0 +1,51 @@
+<% content_for :title, @service.name %>
+
+<h1><%= @service.name %></h1>
+
+<dl class="row">
+  <dt class="col-sm-3">Name</dt>
+  <dd class="col-sm-9"><%= @service.name %></dd>
+
+  <dt class="col-sm-3">Current Price</dt>
+  <dd class="col-sm-9">
+    <%= number_to_currency(@service.current_price) %>
+  </dd>
+</dl>
+
+<h2>Repair History</h2>
+
+<% if @service.repair_services.any? %>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Repair</th>
+        <th>Bike</th>
+        <th>Charged Price</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <% @service.repair_services.each do |repair_service| %>
+        <tr>
+          <td>
+            <%= link_to "Repair ##{repair_service.repair.id}",
+                        repair_path(repair_service.repair) %>
+          </td>
+
+          <td>
+            <%= link_to "#{repair_service.repair.bike.make} #{repair_service.repair.bike.model}",
+                        bike_path(repair_service.repair.bike) %>
+          </td>
+
+          <td>
+            <%= number_to_currency(repair_service.charged_price) %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p>This service has not been used in any repairs.</p>
+<% end %>
+
+<%= link_to "Back to Services", services_path, class: "btn btn-secondary" %>

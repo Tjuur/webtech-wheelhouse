@@ -1,3 +1,8 @@
+RepairService.delete_all
+Repair.delete_all
+Bike.delete_all
+Customer.delete_all
+Staff.delete_all
 Service.delete_all
 
 services = [
@@ -32,8 +37,6 @@ services.each do |name, price|
   )
 end
 
-Staff.delete_all
-
 staff_members = [
   ["Hank Schrader", "mechanic"],
   ["Walter White", "mechanic"],
@@ -48,7 +51,6 @@ staff_members.each do |name, role|
   )
 end
 
-Customer.delete_all
 
 customers = [
   ["Laura Bennett", "555-0101"],
@@ -70,7 +72,6 @@ customers.each do |name, phone|
   )
 end
 
-Bike.delete_all
 
 customers = Customer.order(:id).to_a
 
@@ -99,7 +100,6 @@ bikes.each do |customer_id, make, model, colour, serial_number|
   )
 end
 
-Repair.delete_all
 
 bikes = Bike.order(:id).to_a
 staff = Staff.order(:id).to_a
@@ -258,8 +258,6 @@ repairs += [
 repairs.each do |repair|
   Repair.create!(repair)
 end
-
-RepairService.delete_all
 
 repairs = Repair.order(:id).to_a
 services = Service.order(:name).to_a

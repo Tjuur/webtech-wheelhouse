@@ -1,0 +1,29 @@
+<%
+  overdue = repair.promised_on.present? &&
+            repair.promised_on < Date.current &&
+            repair.handed_back_at.nil?
+%>
+
+<tr class="<%= 'table-danger' if overdue %>">
+  <td>
+    <%= link_to "#{repair.bike.make} #{repair.bike.model}", bike_path(repair.bike) %>
+  </td>
+
+  <td>
+    <%= link_to repair.bike.customer.name, customer_path(repair.bike.customer) %>
+  </td>
+
+  <td><%= repair.status %></td>
+
+  <td>
+    <% if repair.promised_on.present? %>
+      <%= repair.promised_on.strftime("%d %b %Y") %>
+    <% else %>
+      Not set
+    <% end %>
+  </td>
+
+  <td>
+    <%= link_to "View", repair_path(repair), class: "btn btn-primary btn-sm" %>
+  </td>
+</tr>

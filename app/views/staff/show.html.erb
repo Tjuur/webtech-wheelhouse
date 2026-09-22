@@ -12,7 +12,7 @@
 
 <h2>Repairs</h2>
 
-<% if @staff_member.repairs.any? %>
+<% if @repairs.any? %>
   <table class="table table-striped">
     <thead>
       <tr>
@@ -25,7 +25,7 @@
     </thead>
 
     <tbody>
-      <%= render @staff_member.repairs %>
+      <%= render @repairs %>
     </tbody>
   </table>
 <% else %>

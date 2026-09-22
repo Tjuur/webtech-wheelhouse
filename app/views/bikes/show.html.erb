@@ -23,7 +23,7 @@
 
 <h2>Repairs</h2>
 
-<% if @bike.repairs.any? %>
+<% if @repairs.any? %>
   <table class="table table-striped">
     <thead>
       <tr>
@@ -36,7 +36,7 @@
     </thead>
 
     <tbody>
-      <%= render @bike.repairs %>
+      <%= render @repairs %>
     </tbody>
   </table>
 <% else %>

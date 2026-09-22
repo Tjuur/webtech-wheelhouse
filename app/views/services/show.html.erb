@@ -14,7 +14,7 @@
 
 <h2>Repair History</h2>
 
-<% if @service.repair_services.any? %>
+<% if @repair_services.any? %>
   <table class="table table-striped">
     <thead>
       <tr>
@@ -25,7 +25,7 @@
     </thead>
 
     <tbody>
-      <% @service.repair_services.each do |repair_service| %>
+      <% @repair_services.each do |repair_service| %>
         <tr>
           <td>
             <%= link_to "Repair ##{repair_service.repair.id}",

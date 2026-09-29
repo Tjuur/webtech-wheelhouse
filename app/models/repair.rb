@@ -15,24 +15,31 @@ class Repair < ApplicationRecord
 	has_many :repair_services, dependent: :destroy
 	has_many :services, through: :repair_services, dependent: :destroy
 
+	accepts_nested_attributes_for :repair_services,
+		allow_destroy: true,
+		reject_if: ->(attributes) {
+			attributes["service_id"].blank? && attributes[:service_id].blank?
+		}
+
 	validates :status, presence: true
+	validates_associated :repair_services
 
 	validate :dates_must_follow_intake
-  validate :lifecycle_must_be_consistent
+	validate :lifecycle_must_be_consistent
 
-  scope :open, -> { where(handed_back_at: nil) }
-  scope :overdue, -> { open.where(promised_on: ...Date.current) }
-  scope :by_promised_date, -> { order(:promised_on) }
+	scope :open, -> { where(handed_back_at: nil) }
+	scope :overdue, -> { open.where(promised_on: ...Date.current) }
+	scope :by_promised_date, -> { order(:promised_on) }
 
-  def overdue?
-    handed_back_at.nil? && promised_on.present? && promised_on < Date.current
-  end
+	def overdue?
+		handed_back_at.nil? && promised_on.present? && promised_on < Date.current
+	end
 
-  def total
-    repair_services.sum(:charged_price)
-  end
+	def total
+		repair_services.sum(:charged_price)
+	end
 
-  private
+	private
 
 	def dates_must_follow_intake
 		return if created_at.blank?
@@ -46,17 +53,26 @@ class Repair < ApplicationRecord
 		end
 	end
 
-  def lifecycle_must_be_consistent
-    if handed_back_at.present? && !picked_up?
-      errors.add(:handed_back_at, "can only be recorded when the repair has been picked up")
-    end
+	def lifecycle_must_be_consistent
+		if handed_back_at.present? && !picked_up?
+			errors.add(
+				:handed_back_at,
+				"can only be recorded when the repair has been picked up"
+			)
+		end
 
-    if (in_progress? || ready? || picked_up?) && approval_status.blank?
-      errors.add(:approval_status, "must be recorded before the repair can move past customer approval")
-    end
+		if (in_progress? || ready? || picked_up?) && approval_status.blank?
+			errors.add(
+				:approval_status,
+				"must be recorded before the repair can move past customer approval"
+			)
+		end
 
-    if declined? && approval_status.blank?
-      errors.add(:approval_status, "must be recorded when the customer declines the repair")
-    end
-  end
+		if declined? && approval_status.blank?
+			errors.add(
+				:approval_status,
+				"must be recorded when the customer declines the repair"
+			)
+		end
+	end
 end

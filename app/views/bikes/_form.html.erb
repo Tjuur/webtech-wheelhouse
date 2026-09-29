@@ -1,0 +1,80 @@
+<%= form_with model: bike do |form| %>
+	<% if bike.errors.any? %>
+		<div class="alert alert-danger" role="alert">
+			<h2 class="h5">Please correct the following errors:</h2>
+			<ul class="mb-0">
+				<% bike.errors.full_messages.each do |message| %>
+					<li><%= message %></li>
+				<% end %>
+			</ul>
+		</div>
+	<% end %>
+
+	<div class="mb-3">
+		<%= form.label :customer_id, "Customer", class: "form-label" %>
+		<%= form.collection_select :customer_id,
+			@customers,
+			:id,
+			:name,
+			{ prompt: "Select a customer" },
+			{
+				class: "form-select #{'is-invalid' if bike.errors[:customer].any? || bike.errors[:customer_id].any?}"
+			} %>
+
+		<% bike.errors.full_messages_for(:customer).each do |message| %>
+			<div class="invalid-feedback"><%= message %></div>
+		<% end %>
+
+		<% bike.errors.full_messages_for(:customer_id).each do |message| %>
+			<div class="invalid-feedback"><%= message %></div>
+		<% end %>
+	</div>
+
+	<div class="mb-3">
+		<%= form.label :make, class: "form-label" %>
+		<%= form.text_field :make,
+			class: "form-control #{'is-invalid' if bike.errors[:make].any?}" %>
+
+		<% bike.errors.full_messages_for(:make).each do |message| %>
+			<div class="invalid-feedback"><%= message %></div>
+		<% end %>
+	</div>
+
+	<div class="mb-3">
+		<%= form.label :model, class: "form-label" %>
+		<%= form.text_field :model,
+			class: "form-control #{'is-invalid' if bike.errors[:model].any?}" %>
+
+		<% bike.errors.full_messages_for(:model).each do |message| %>
+			<div class="invalid-feedback"><%= message %></div>
+		<% end %>
+	</div>
+
+	<div class="mb-3">
+		<%= form.label :colour, class: "form-label" %>
+		<%= form.text_field :colour,
+			class: "form-control #{'is-invalid' if bike.errors[:colour].any?}" %>
+
+		<% bike.errors.full_messages_for(:colour).each do |message| %>
+			<div class="invalid-feedback"><%= message %></div>
+		<% end %>
+	</div>
+
+	<div class="mb-3">
+		<%= form.label :serial_number, "Serial Number", class: "form-label" %>
+		<%= form.text_field :serial_number,
+			class: "form-control #{'is-invalid' if bike.errors[:serial_number].any?}" %>
+
+		<% bike.errors.full_messages_for(:serial_number).each do |message| %>
+			<div class="invalid-feedback"><%= message %></div>
+		<% end %>
+	</div>
+
+	<div class="d-flex gap-2">
+		<%= form.submit class: "btn btn-primary" %>
+
+		<%= link_to "Cancel",
+			bike.persisted? ? bike_path(bike) : bikes_path,
+			class: "btn btn-secondary" %>
+	</div>
+<% end %>

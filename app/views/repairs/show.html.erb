@@ -54,12 +54,12 @@
 				<th>Charged Price</th>
 			</tr>
 		</thead>
-
 		<tbody>
 			<% @repair_services.each do |repair_service| %>
 				<tr>
 					<td>
-						<%= link_to repair_service.service.name, service_path(repair_service.service) %>
+						<%= link_to repair_service.service.name,
+							service_path(repair_service.service) %>
 					</td>
 					<td>
 						<%= number_to_currency(repair_service.charged_price) %>
@@ -67,13 +67,10 @@
 				</tr>
 			<% end %>
 		</tbody>
-
 		<tfoot>
 			<tr>
 				<th>Total</th>
-				<th>
-					<%= number_to_currency(@repair.total) %>
-				</th>
+				<th><%= number_to_currency(@repair.total) %></th>
 			</tr>
 		</tfoot>
 	</table>
@@ -81,4 +78,22 @@
 	<p>No services have been charged to this repair.</p>
 <% end %>
 
-<%= link_to "Back to Repairs", repairs_path, class: "btn btn-secondary" %>
+<div class="d-flex gap-2 mt-3">
+	<%= link_to "Edit Repair",
+		edit_repair_path(@repair),
+		class: "btn btn-primary" %>
+
+	<%= button_to "Delete Repair",
+		repair_path(@repair),
+		method: :delete,
+		class: "btn btn-danger",
+		form: {
+			data: {
+				turbo_confirm: "Delete repair ##{@repair.id}?"
+			}
+		} %>
+
+	<%= link_to "Back to Repairs",
+		repairs_path,
+		class: "btn btn-secondary" %>
+</div>

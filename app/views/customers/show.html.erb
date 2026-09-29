@@ -1,36 +1,53 @@
-<% customers/show.html.erb %>
+<% content_for :title, @customer.name %>
 
 <h1><%= @customer.name %></h1>
 
 <dl class="row">
-  <dt class="col-sm-3">Name</dt>
-  <dd class="col-sm-9"><%= @customer.name %></dd>
-
-  <dt class="col-sm-3">Phone</dt>
-  <dd class="col-sm-9"><%= @customer.phone %></dd>
+	<dt class="col-sm-3">Phone</dt>
+	<dd class="col-sm-9"><%= @customer.phone %></dd>
 </dl>
 
 <h2>Bikes</h2>
 
-<% if @bikes.any? %>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>Make</th>
-        <th>Model</th>
-        <th>Colour</th>
-        <th>Serial Number</th>
-        <th>Owner</th>
-        <th></th>
-      </tr>
-    </thead>
+<%= link_to "Add Bike",
+	new_bike_path(customer_id: @customer.id),
+	class: "btn btn-primary mb-3" %>
 
-    <tbody>
-      <%= render @bikes %>
-    </tbody>
-  </table>
+<% if @bikes.any? %>
+	<table class="table table-striped">
+		<thead>
+			<tr>
+				<th>Make</th>
+				<th>Model</th>
+				<th>Colour</th>
+				<th>Serial Number</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			<%= render @bikes %>
+		</tbody>
+	</table>
 <% else %>
-  <p>This customer has no bikes.</p>
+	<p>This customer has no bikes.</p>
 <% end %>
 
-<%= link_to "Back to Customers", customers_path, class: "btn btn-secondary" %>
+<div class="d-flex gap-2 mt-3">
+	<%= link_to "Edit Customer",
+		edit_customer_path(@customer),
+		class: "btn btn-primary" %>
+
+	<%= button_to "Delete Customer",
+		customer_path(@customer),
+		method: :delete,
+		class: "btn btn-danger",
+		form: {
+			data: {
+				turbo_confirm: "Delete customer #{@customer.name}?"
+			}
+		} %>
+
+	<%= link_to "Back to Customers",
+		customers_path,
+		class: "btn btn-secondary" %>
+</div>

@@ -1,5 +1,15 @@
 <tr class="<%= 'table-danger' if repair.overdue? %>">
 	<td>
+		<% if repair.intake_photos.attached? %>
+			<%= image_tag repair.intake_photos.first.variant(:thumbnail),
+				alt: "#{repair.bike.make} #{repair.bike.model}, repair ##{repair.id} intake photo",
+				class: "rounded" %>
+		<% else %>
+			<span class="text-muted">No photo</span>
+		<% end %>
+	</td>
+
+	<td>
 		<%= link_to "#{repair.bike.make} #{repair.bike.model}", bike_path(repair.bike) %>
 	</td>
 
@@ -10,6 +20,16 @@
 	<td><%= repair.status %></td>
 
 	<td>
+		<% if repair.diagnosis.present? %>
+			<span class="d-inline-block text-truncate" style="max-width: 220px;">
+				<%= truncate(repair.diagnosis.to_plain_text, length: 80) %>
+			</span>
+		<% else %>
+			<span class="text-muted">No diagnosis</span>
+		<% end %>
+	</td>
+
+	<td>
 		<% if repair.promised_on.present? %>
 			<%= repair.promised_on.strftime("%d %b %Y") %>
 		<% else %>
@@ -18,6 +38,8 @@
 	</td>
 
 	<td>
-		<%= link_to "View", repair_path(repair), class: "btn btn-primary btn-sm" %>
+		<%= link_to "View",
+			repair_path(repair),
+			class: "btn btn-primary btn-sm" %>
 	</td>
 </tr>

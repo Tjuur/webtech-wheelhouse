@@ -104,6 +104,27 @@
 		<% end %>
 	</div>
 
+	<div class="mb-3">
+		<%= form.label :intake_photos, "Intake Photos", class: "form-label" %>
+		<%= form.file_field :intake_photos,
+			multiple: true,
+			accept: "image/jpeg,image/png",
+			class: "form-control #{'is-invalid' if repair.errors[:intake_photos].any?}" %>
+
+		<% repair.errors.full_messages_for(:intake_photos).each do |message| %>
+			<div class="invalid-feedback"><%= message %></div>
+		<% end %>
+
+		<div class="form-text">
+			JPEG or PNG images only. Maximum 5 MB per image.
+		</div>
+	</div>
+
+	<div class="mb-3">
+		<%= form.label :diagnosis, "Diagnosis", class: "form-label" %>
+		<%= form.rich_text_area :diagnosis %>
+	</div>
+
 	<h2 class="h4 mt-4">Services</h2>
 
 	<%= form.fields_for :repair_services do |line_form| %>

@@ -44,6 +44,48 @@
 	</dd>
 </dl>
 
+<h2>Diagnosis</h2>
+
+<% if @repair.diagnosis.present? %>
+	<div class="mb-4">
+		<%= @repair.diagnosis %>
+	</div>
+<% else %>
+	<p>No diagnosis has been recorded.</p>
+<% end %>
+
+<h2>Intake Photos</h2>
+
+<% if @repair.intake_photos.attached? %>
+	<div class="row g-3 mb-4">
+		<% @repair.intake_photos.each do |photo| %>
+			<div class="col-md-6 col-lg-4">
+				<div class="card h-100">
+					<%= link_to url_for(photo), target: "_blank" do %>
+						<%= image_tag photo.variant(:display),
+							alt: "#{@repair.bike.make} #{@repair.bike.model}, repair ##{@repair.id} intake photo",
+							class: "card-img-top img-fluid" %>
+					<% end %>
+
+					<div class="card-body">
+						<%= button_to "Remove Photo",
+							repair_intake_photo_path(@repair, attachment_id: photo.id),
+							method: :delete,
+							class: "btn btn-outline-danger btn-sm",
+							form: {
+								data: {
+									turbo_confirm: "Remove this intake photo?"
+								}
+							} %>
+					</div>
+				</div>
+			</div>
+		<% end %>
+	</div>
+<% else %>
+	<p>No intake photos have been uploaded.</p>
+<% end %>
+
 <h2>Services</h2>
 
 <% if @repair_services.any? %>
@@ -54,6 +96,7 @@
 				<th>Charged Price</th>
 			</tr>
 		</thead>
+
 		<tbody>
 			<% @repair_services.each do |repair_service| %>
 				<tr>
@@ -67,6 +110,7 @@
 				</tr>
 			<% end %>
 		</tbody>
+
 		<tfoot>
 			<tr>
 				<th>Total</th>

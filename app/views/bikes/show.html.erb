@@ -28,14 +28,19 @@
 	class: "btn btn-primary mb-3" %>
 
 <% if @repairs.any? %>
-	<table class="table table-striped">
+	<table class="table table-striped align-middle">
 		<thead>
 			<tr>
+				<th>Photo</th>
+				<th>Bike</th>
+				<th>Customer</th>
 				<th>Status</th>
+				<th>Diagnosis</th>
 				<th>Promised Date</th>
 				<th></th>
 			</tr>
 		</thead>
+
 		<tbody>
 			<%= render @repairs %>
 		</tbody>

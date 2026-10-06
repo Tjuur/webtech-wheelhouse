@@ -7,7 +7,11 @@ class BikesController < ApplicationController
 	end
 
 	def show
-		@repairs = @bike.repairs.includes(bike: :customer).by_promised_date
+		@repairs = @bike.repairs
+			.includes(bike: :customer)
+			.with_attached_intake_photos
+			.with_rich_text_diagnosis
+			.by_promised_date
 	end
 
 	def new

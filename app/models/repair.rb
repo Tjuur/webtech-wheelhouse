@@ -1,4 +1,7 @@
 class Repair < ApplicationRecord
+	MAX_INTAKE_PHOTO_SIZE = 5.megabytes
+	ALLOWED_INTAKE_PHOTO_TYPES = %w[image/jpeg image/png].freeze
+
 	enum :status, {
 		received: "Received",
 		assessment: "Assessment",
@@ -11,6 +14,16 @@ class Repair < ApplicationRecord
 
 	belongs_to :bike
 	belongs_to :staff, optional: true
+
+	has_many_attached :intake_photos do |attachable|
+		attachable.variant :thumbnail,
+			resize_to_fill: [120, 90]
+
+		attachable.variant :display,
+			resize_to_limit: [800, 600]
+	end
+
+	has_rich_text :diagnosis
 
 	has_many :repair_services, dependent: :destroy
 	has_many :services, through: :repair_services, dependent: :destroy
@@ -26,13 +39,16 @@ class Repair < ApplicationRecord
 
 	validate :dates_must_follow_intake
 	validate :lifecycle_must_be_consistent
+	validate :intake_photos_must_be_valid
 
 	scope :open, -> { where(handed_back_at: nil) }
 	scope :overdue, -> { open.where(promised_on: ...Date.current) }
 	scope :by_promised_date, -> { order(:promised_on) }
 
 	def overdue?
-		handed_back_at.nil? && promised_on.present? && promised_on < Date.current
+		handed_back_at.nil? &&
+			promised_on.present? &&
+			promised_on < Date.current
 	end
 
 	def total
@@ -41,15 +57,41 @@ class Repair < ApplicationRecord
 
 	private
 
-	def dates_must_follow_intake
-		return if created_at.blank?
+	def intake_photos_must_be_valid
+		intake_photos.each do |photo|
+			next unless photo.blob
 
-		if promised_on.present? && promised_on < created_at.to_date
-			errors.add(:promised_on, "cannot be before the repair came in")
+			unless ALLOWED_INTAKE_PHOTO_TYPES.include?(photo.blob.content_type)
+				errors.add(
+					:intake_photos,
+					"#{photo.blob.filename} must be a JPEG or PNG image"
+				)
+			end
+
+			if photo.blob.byte_size > MAX_INTAKE_PHOTO_SIZE
+				errors.add(
+					:intake_photos,
+					"#{photo.blob.filename} must be 5 MB or smaller"
+				)
+			end
+		end
+	end
+
+	def dates_must_follow_intake
+		intake_date = created_at&.to_date || Date.current
+
+		if promised_on.present? && promised_on < intake_date
+			errors.add(
+				:promised_on,
+				"cannot be before the repair came in"
+			)
 		end
 
-		if handed_back_at.present? && handed_back_at.to_date < created_at.to_date
-			errors.add(:handed_back_at, "cannot be before the repair came in")
+		if handed_back_at.present? && handed_back_at.to_date < intake_date
+			errors.add(
+				:handed_back_at,
+				"cannot be before the repair came in"
+			)
 		end
 	end
 

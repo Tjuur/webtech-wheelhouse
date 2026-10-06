@@ -12,9 +12,9 @@ class RepairsController < ApplicationController
 	end
 
 	def show
-		@repair_services = @repair.repair_services
-			.includes(:service)
-			.by_service_name
+		@repair_services = @repair.repair_services.sort_by do |repair_service|
+			repair_service.service.name
+		end
 	end
 
 	def new
@@ -87,7 +87,8 @@ class RepairsController < ApplicationController
 		@repair = Repair
 			.includes(
 				:staff,
-				bike: :customer
+				{ bike: :customer },
+				{ repair_services: :service }
 			)
 			.with_attached_intake_photos
 			.with_rich_text_diagnosis

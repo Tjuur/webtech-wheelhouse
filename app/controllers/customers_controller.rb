@@ -6,7 +6,7 @@ class CustomersController < ApplicationController
 	end
 
 	def show
-		@bikes = @customer.bikes.includes(:customer).by_make_and_model
+		@bikes = @customer.bikes.order(:make, :model)
 	end
 
 	def new
@@ -17,7 +17,8 @@ class CustomersController < ApplicationController
 		@customer = Customer.new(customer_params)
 
 		if @customer.save
-			redirect_to @customer, notice: "Customer #{@customer.name} was created."
+			redirect_to @customer,
+				notice: "Customer #{@customer.name} was created."
 		else
 			render :new, status: :unprocessable_entity
 		end
@@ -28,7 +29,8 @@ class CustomersController < ApplicationController
 
 	def update
 		if @customer.update(customer_params)
-			redirect_to @customer, notice: "Customer #{@customer.name} was updated."
+			redirect_to @customer,
+				notice: "Customer #{@customer.name} was updated."
 		else
 			render :edit, status: :unprocessable_entity
 		end

@@ -16,4 +16,11 @@ Rails.application.routes.draw do
 
   resources :services
   resources :staff
+
+  namespace :api do
+    namespace :v1 do
+      resources :services, only: %i[index show create]
+      resources :repairs, only: %i[index show]
+    end
+  end
 end

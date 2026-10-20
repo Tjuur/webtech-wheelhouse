@@ -357,6 +357,7 @@ Requests made using tools such as `curl` do not require CORS permissions.
 The public Wheelhouse price list is integrated into my personal website.
 
 **Published website:**
+*IMPORTANT NOTE: Please make sure to enable accesing external files from your browser for this to work.
 
 https://tjuur.github.io/webtech-lab-01/
 

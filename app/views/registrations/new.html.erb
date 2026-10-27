@@ -1,0 +1,70 @@
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <h1 class="h3 mb-4">Create an account</h1>
+
+        <%= form_with model: @user,
+                      url: registration_path,
+                      scope: :user do |form| %>
+
+          <div class="mb-3">
+            <%= form.label :email_address, "Email address",
+                           class: "form-label" %>
+
+            <%= form.email_field :email_address,
+                                 required: true,
+                                 autofocus: true,
+                                 autocomplete: "email",
+                                 class: "form-control" %>
+
+            <% @user.errors.full_messages_for(:email_address).each do |message| %>
+              <div class="text-danger small mt-1"><%= message %></div>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <%= form.label :password, class: "form-label" %>
+
+            <%= form.password_field :password,
+                                    required: true,
+                                    minlength: 10,
+                                    autocomplete: "new-password",
+                                    class: "form-control" %>
+
+            <div class="form-text">At least 10 characters.</div>
+
+            <% @user.errors.full_messages_for(:password).each do |message| %>
+              <div class="text-danger small mt-1"><%= message %></div>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <%= form.label :password_confirmation,
+                           "Confirm password",
+                           class: "form-label" %>
+
+            <%= form.password_field :password_confirmation,
+                                    required: true,
+                                    autocomplete: "new-password",
+                                    class: "form-control" %>
+
+            <% @user.errors.full_messages_for(:password_confirmation).each do |message| %>
+              <div class="text-danger small mt-1"><%= message %></div>
+            <% end %>
+          </div>
+
+          <%= form.submit "Create account",
+                          class: "btn btn-primary w-100" %>
+        <% end %>
+
+        <p class="text-center mt-3 mb-0">
+          Already have an account?
+          <%= link_to "Sign in", new_session_path %>
+        </p>
+
+      </div>
+    </div>
+  </div>
+</div>

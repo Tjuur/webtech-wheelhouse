@@ -1,0 +1,20 @@
+<h1>Welcome to Wheelhouse!</h1>
+
+<p>Hello!</p>
+
+<p>Your Wheelhouse account has been created successfully.</p>
+
+<p>
+  <strong>Account email:</strong>
+  <%= @user.email_address %>
+</p>
+
+<p>
+  You can now sign in to manage workshop operations.
+</p>
+
+<p>
+  <%= link_to "Sign in to Wheelhouse", new_session_url %>
+</p>
+
+<p>Thanks for joining Wheelhouse!</p>

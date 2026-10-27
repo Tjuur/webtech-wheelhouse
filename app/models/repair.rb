@@ -14,6 +14,7 @@ class Repair < ApplicationRecord
 
   belongs_to :bike
   belongs_to :staff, optional: true
+  belongs_to :received_by_user, class_name: "User", optional: true
 
   has_many_attached :intake_photos do |attachable|
     attachable.variant :thumbnail,
@@ -90,7 +91,7 @@ class Repair < ApplicationRecord
     if handed_back_at.present? && handed_back_at.to_date < intake_date
       errors.add(
         :handed_back_at,
-        "cannot be before the repair came in"
+        "can only be recorded when the repair has been picked up"
       )
     end
   end

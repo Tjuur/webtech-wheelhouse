@@ -5,7 +5,10 @@ class RepairsController < ApplicationController
 
   def index
     @repairs = Repair
-      .includes(bike: :customer)
+      .includes(
+        { received_by_user: :staff },
+        { bike: :customer }
+      )
       .with_attached_intake_photos
       .with_rich_text_diagnosis
       .by_promised_date
@@ -27,6 +30,8 @@ class RepairsController < ApplicationController
 
   def create
     @repair = Repair.new(repair_attributes_without_photos)
+
+    @repair.received_by_user = Current.user
     @repair.intake_photos = submitted_photos
 
     if @repair.save
@@ -87,6 +92,7 @@ class RepairsController < ApplicationController
     @repair = Repair
       .includes(
         :staff,
+        :received_by_user,
         { bike: :customer },
         { repair_services: :service }
       )

@@ -1,0 +1,14 @@
+<h1>Wheelhouse password reset</h1>
+
+<p>Hello,</p>
+
+<p>We received a request to reset your Wheelhouse account password.</p>
+
+<p>
+  <%= link_to "Reset your password",
+    edit_password_url(@user.password_reset_token) %>
+</p>
+
+<p>This link expires in 15 minutes.</p>
+
+<p>If you didn't request this change, you can safely ignore this email.</p>

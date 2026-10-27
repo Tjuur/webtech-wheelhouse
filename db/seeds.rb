@@ -1,4 +1,3 @@
-# Clean up Active Storage and Action Text first so the seeds are repeatable.
 ActiveStorage::Attachment.delete_all
 ActiveStorage::VariantRecord.delete_all
 ActionText::RichText.delete_all
@@ -8,7 +7,6 @@ RepairService.delete_all
 Repair.delete_all
 Bike.delete_all
 Customer.delete_all
-Staff.delete_all
 Service.delete_all
 
 services = [
@@ -51,11 +49,62 @@ staff_members = [
 ]
 
 staff_members.each do |name, role|
-  Staff.create!(
-    name: name,
-    role: role
-  )
+  member = Staff.find_or_initialize_by(name: name)
+  member.role = role
+  member.save!
 end
+
+seed_accounts = [
+  {
+    staff_name: "Hank Schrader",
+    email: "hank@wheelhouse.cl",
+    password: "HankPassword123!",
+    role: :owner
+  },
+  {
+    staff_name: "Walter White",
+    email: "walter@wheelhouse.cl",
+    password: "WalterPassword123!",
+    role: :mechanic
+  },
+  {
+    staff_name: "Jessie Pinkman",
+    email: "jessie@wheelhouse.cl",
+    password: "JessiePassword123!",
+    role: :mechanic
+  },
+  {
+    staff_name: "Scarlett Johansson",
+    email: "scarlett@wheelhouse.cl",
+    password: "ScarlettPassword123!",
+    role: :counter
+  }
+]
+
+seed_accounts.each do |account|
+  staff_member = Staff.find_by!(name: account[:staff_name])
+  user = User.find_or_initialize_by(email_address: account[:email])
+
+  user.staff = staff_member
+  user.role = account[:role]
+
+  if user.new_record?
+    user.password = account[:password]
+    user.password_confirmation = account[:password]
+  end
+
+  user.save!
+end
+
+guest = User.find_or_initialize_by(email_address: "guest@wheelhouse.cl")
+
+if guest.new_record?
+  guest.password = "GuestPassword123!"
+  guest.password_confirmation = "GuestPassword123!"
+end
+
+guest.staff = nil
+guest.save!
 
 customers = [
   [ "Laura Bennett", "555-0101" ],
@@ -105,7 +154,10 @@ bikes.each do |customer_id, make, model, colour, serial_number|
 end
 
 bikes = Bike.order(:id).to_a
-staff = Staff.order(:id).to_a
+
+staff = staff_members.map do |name, _role|
+  Staff.find_by!(name: name)
+end
 
 repairs = [
   {
@@ -254,8 +306,15 @@ repairs += [
   }
 ]
 
-repairs.each do |repair|
-  Repair.create!(repair)
+receivers = [
+  User.find_by!(email_address: "scarlett@wheelhouse.cl"),
+  User.find_by!(email_address: "hank@wheelhouse.cl")
+]
+
+repairs.each_with_index do |repair_attributes, index|
+  attributes = repair_attributes.dup
+  attributes[:received_by_user] = receivers[index] if index < receivers.length
+  Repair.create!(attributes)
 end
 
 repairs = Repair.order(:id).to_a
@@ -295,7 +354,7 @@ end
 
 diagnoses = {
   1 => nil,
-  2 => "<p><strong>Initial inspection:</strong> front brake is rubbing against the rim.</p>",
+  2 => "<p><strong>Initial inspection:</strong>front brake is rubbing against the rim.</p>",
   3 => "<p>Drivetrain inspected. Customer approval is required before work begins.</p>",
   4 => "<p><strong>Gear shifting issue confirmed.</strong></p><ul><li>Chain is worn</li><li>Rear derailleur needs adjustment</li></ul>",
   5 => "<p>Rear wheel is slightly out of true. Spoke tension is uneven.</p>",
@@ -319,19 +378,10 @@ diagnoses.each do |repair_number, diagnosis|
   repair.diagnosis.save!
 end
 
-seed_image_path = Rails.root.join(
-  "db",
-  "seeds",
-  "intake-bike.jpg"
-)
+seed_image_path = Rails.root.join("db", "seeds", "intake-bike.jpg")
 
-unless File.exist?(seed_image_path)
-  raise "Missing seed image: #{seed_image_path}"
-end
+raise "Missing seed image: #{seed_image_path}" unless File.exist?(seed_image_path)
 
-# Repairs 1 through 10 receive intake photos.
-# Repair 1 receives four photos so we have a repair with 4+.
-# Repairs 11 through 15 intentionally have no photos.
 repairs.first(10).each_with_index do |repair, index|
   photo_count = index.zero? ? 4 : 1
 

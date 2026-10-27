@@ -1,45 +1,56 @@
 <tr class="<%= 'table-danger' if repair.overdue? %>">
-	<td>
-		<% if repair.intake_photos.attached? %>
-			<%= image_tag repair.intake_photos.first.variant(:thumbnail),
-				alt: "#{repair.bike.make} #{repair.bike.model}, repair ##{repair.id} intake photo",
-				class: "rounded" %>
-		<% else %>
-			<span class="text-muted">No photo</span>
-		<% end %>
-	</td>
+  <td>
+    <% if repair.intake_photos.attached? %>
+      <%= image_tag repair.intake_photos.first.variant(:thumbnail),
+        alt: "#{repair.bike.make} #{repair.bike.model}, repair ##{repair.id} intake photo",
+        class: "rounded" %>
+    <% else %>
+      <span class="text-muted">No photo</span>
+    <% end %>
+  </td>
 
-	<td>
-		<%= link_to "#{repair.bike.make} #{repair.bike.model}", bike_path(repair.bike) %>
-	</td>
+  <td>
+    <%= link_to "#{repair.bike.make} #{repair.bike.model}",
+      bike_path(repair.bike) %>
+  </td>
 
-	<td>
-		<%= link_to repair.bike.customer.name, customer_path(repair.bike.customer) %>
-	</td>
+  <td>
+    <%= link_to repair.bike.customer.name,
+      customer_path(repair.bike.customer) %>
+  </td>
 
-	<td><%= repair.status %></td>
+  <td>
+    <% if repair.received_by_user.present? %>
+      <%= repair.received_by_user.staff&.name ||
+          repair.received_by_user.email_address %>
+    <% else %>
+      <span class="text-muted">Not recorded</span>
+    <% end %>
+  </td>
 
-	<td>
-		<% if repair.diagnosis.present? %>
-			<span class="d-inline-block text-truncate" style="max-width: 220px;">
-				<%= truncate(repair.diagnosis.to_plain_text, length: 80) %>
-			</span>
-		<% else %>
-			<span class="text-muted">No diagnosis</span>
-		<% end %>
-	</td>
+  <td><%= repair.status %></td>
 
-	<td>
-		<% if repair.promised_on.present? %>
-			<%= repair.promised_on.strftime("%d %b %Y") %>
-		<% else %>
-			Not set
-		<% end %>
-	</td>
+  <td>
+    <% if repair.diagnosis.present? %>
+      <span class="d-inline-block text-truncate" style="max-width: 220px;">
+        <%= truncate(repair.diagnosis.to_plain_text, length: 80) %>
+      </span>
+    <% else %>
+      <span class="text-muted">No diagnosis</span>
+    <% end %>
+  </td>
 
-	<td>
-		<%= link_to "View",
-			repair_path(repair),
-			class: "btn btn-primary btn-sm" %>
-	</td>
+  <td>
+    <% if repair.promised_on.present? %>
+      <%= repair.promised_on.strftime("%d %b %Y") %>
+    <% else %>
+      Not set
+    <% end %>
+  </td>
+
+  <td>
+    <%= link_to "View",
+      repair_path(repair),
+      class: "btn btn-primary btn-sm" %>
+  </td>
 </tr>

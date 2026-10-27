@@ -1,0 +1,47 @@
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h3 mb-3">Set a new password</h1>
+
+        <%= form_with url: password_path(params[:token]), method: :put do |form| %>
+          <div class="mb-3">
+            <%= form.label :password, "New password",
+              class: "form-label" %>
+
+            <%= form.password_field :password,
+              required: true,
+              minlength: 10,
+              maxlength: 72,
+              autocomplete: "new-password",
+              class: "form-control" %>
+
+            <div class="form-text">At least 10 characters.</div>
+
+            <% @user.errors.full_messages_for(:password).each do |message| %>
+              <div class="text-danger small mt-1"><%= message %></div>
+            <% end %>
+          </div>
+
+          <div class="mb-3">
+            <%= form.label :password_confirmation,
+              "Confirm new password",
+              class: "form-label" %>
+
+            <%= form.password_field :password_confirmation,
+              required: true,
+              autocomplete: "new-password",
+              class: "form-control" %>
+
+            <% @user.errors.full_messages_for(:password_confirmation).each do |message| %>
+              <div class="text-danger small mt-1"><%= message %></div>
+            <% end %>
+          </div>
+
+          <%= form.submit "Update password",
+            class: "btn btn-primary w-100" %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

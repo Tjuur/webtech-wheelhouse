@@ -2,6 +2,10 @@
   <td><%= staff.name %></td>
   <td><%= staff.role %></td>
   <td>
-    <%= link_to "View", staff_path(staff), class: "btn btn-primary btn-sm" %>
+    <% if policy(staff).show? %>
+      <%= link_to "View",
+        staff_path(staff),
+        class: "btn btn-primary btn-sm" %>
+    <% end %>
   </td>
 </tr>

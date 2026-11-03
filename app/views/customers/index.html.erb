@@ -1,4 +1,8 @@
-<%= link_to "New Customer", new_customer_path, class: "btn btn-primary mb-3" %>
+<% if policy(Customer).create? %>
+  <%= link_to "New Customer",
+    new_customer_path,
+    class: "btn btn-primary mb-3" %>
+<% end %>
 
 <h1>Customers</h1>
 

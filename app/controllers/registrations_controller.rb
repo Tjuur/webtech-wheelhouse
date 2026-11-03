@@ -1,4 +1,5 @@
 class RegistrationsController < ApplicationController
+  skip_after_action :verify_pundit_authorization
   allow_unauthenticated_access only: %i[new create]
 
   def new

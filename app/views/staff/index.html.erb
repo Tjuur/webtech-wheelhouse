@@ -1,4 +1,8 @@
-<%= link_to "New Staff Member", new_staff_path, class: "btn btn-primary mb-3" %>
+<% if policy(Staff).create? %>
+  <%= link_to "New Staff Member",
+    new_staff_path,
+    class: "btn btn-primary mb-3" %>
+<% end %>
 
 <h1>Staff</h1>
 
@@ -13,7 +17,9 @@
     </thead>
 
     <tbody>
-      <%= render partial: "staff/staff", collection: @staff, as: :staff %>
+      <%= render partial: "staff/staff",
+        collection: @staff,
+        as: :staff %>
     </tbody>
   </table>
 <% else %>

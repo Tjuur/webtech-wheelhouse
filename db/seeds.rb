@@ -1,15 +1,6 @@
-ActiveStorage::Attachment.delete_all
-ActiveStorage::VariantRecord.delete_all
-ActionText::RichText.delete_all
-ActiveStorage::Blob.find_each(&:purge)
+# frozen_string_literal: true
 
-RepairService.delete_all
-Repair.delete_all
-Bike.delete_all
-Customer.delete_all
-Service.delete_all
-
-services = [
+service_data = [
   [ "Flat Tire Repair", 15.00 ],
   [ "Brake Adjustment", 20.00 ],
   [ "Gear Adjustment", 20.00 ],
@@ -34,27 +25,30 @@ services = [
   [ "Brake Cable Replacement", 28.00 ]
 ]
 
-services.each do |name, price|
-  Service.create!(
-    name: name,
-    current_price: price
-  )
+service_data.each do |name, price|
+  service = Service.find_or_initialize_by(name: name)
+  service.current_price = price if service.new_record?
+  service.save! if service.changed?
 end
 
-staff_members = [
+staff_data = [
   [ "Hank Schrader", "mechanic" ],
   [ "Walter White", "mechanic" ],
   [ "Jessie Pinkman", "mechanic" ],
   [ "Scarlett Johansson", "counter" ]
 ]
 
-staff_members.each do |name, role|
+staff_data.each do |name, role|
   member = Staff.find_or_initialize_by(name: name)
-  member.role = role
-  member.save!
+  member.role = role if member.new_record?
+  member.save! if member.changed?
 end
 
-seed_accounts = [
+staff_by_name = Staff.where(
+  name: staff_data.map(&:first)
+).index_by(&:name)
+
+account_data = [
   {
     staff_name: "Hank Schrader",
     email: "hank@wheelhouse.cl",
@@ -78,35 +72,32 @@ seed_accounts = [
     email: "scarlett@wheelhouse.cl",
     password: "ScarlettPassword123!",
     role: :counter
+  },
+  {
+    staff_name: nil,
+    email: "guest@wheelhouse.cl",
+    password: "GuestPassword123!",
+    role: :counter
   }
 ]
 
-seed_accounts.each do |account|
-  staff_member = Staff.find_by!(name: account[:staff_name])
-  user = User.find_or_initialize_by(email_address: account[:email])
-
-  user.staff = staff_member
-  user.role = account[:role]
+account_data.each do |account|
+  user = User.find_or_initialize_by(
+    email_address: account[:email]
+  )
 
   if user.new_record?
     user.password = account[:password]
     user.password_confirmation = account[:password]
   end
 
-  user.save!
+  user.role = account[:role]
+  user.staff = account[:staff_name] ? staff_by_name.fetch(account[:staff_name]) : nil
+
+  user.save! if user.new_record? || user.changed?
 end
 
-guest = User.find_or_initialize_by(email_address: "guest@wheelhouse.cl")
-
-if guest.new_record?
-  guest.password = "GuestPassword123!"
-  guest.password_confirmation = "GuestPassword123!"
-end
-
-guest.staff = nil
-guest.save!
-
-customers = [
+customer_data = [
   [ "Laura Bennett", "555-0101" ],
   [ "James Carter", "555-0102" ],
   [ "Maya Singh", "555-0103" ],
@@ -119,119 +110,126 @@ customers = [
   [ "Lucas Turner", "555-0110" ]
 ]
 
-customers.each do |name, phone|
-  Customer.create!(
-    name: name,
-    phone: phone
-  )
+customer_data.each do |name, phone|
+  customer = Customer.find_or_initialize_by(name: name, phone: phone)
+  customer.save! if customer.new_record?
 end
 
-customers = Customer.order(:id).to_a
+customers_by_name = Customer.where(
+  name: customer_data.map(&:first)
+).index_by(&:name)
 
-bikes = [
-  [ customers[0].id, "Trek", "FX 2", "Black", "TRK-FX2-1001" ],
-  [ customers[0].id, "Trek", "FX 2", "Black", "TRK-FX2-1002" ],
-  [ customers[1].id, "Giant", "Escape 3", "Blue", "GNT-ESC-2001" ],
-  [ customers[2].id, "Specialized", "Sirrus 2.0", "Red", "SPZ-SIR-3001" ],
-  [ customers[3].id, "Cannondale", "Quick 4", "Green", "CAN-QCK-4001" ],
-  [ customers[4].id, "Scott", "Sub Cross 40", "Grey", "SCT-SUB-5001" ],
-  [ customers[5].id, "Merida", "Crossway 20", "Silver", "MER-CRS-6001" ],
-  [ customers[6].id, "Cube", "Hyde", "Black", "CUB-HYD-7001" ],
-  [ customers[7].id, "Bianchi", "C-Sport 2", "White", "BIA-CSP-8001" ],
-  [ customers[8].id, "Orbea", "Vector 20", "Blue", "ORB-VEC-9001" ],
-  [ customers[9].id, "Trek", "Marlin 5", "Red", "TRK-MAR-10001" ],
-  [ customers[3].id, "Giant", "Talon 2", "Black", "GNT-TAL-11001" ]
+bike_data = [
+  [ "Laura Bennett", "Trek", "FX 2", "Black", "TRK-FX2-1001" ],
+  [ "Laura Bennett", "Trek", "FX 2", "Black", "TRK-FX2-1002" ],
+  [ "James Carter", "Giant", "Escape 3", "Blue", "GNT-ESC-2001" ],
+  [ "Maya Singh", "Specialized", "Sirrus 2.0", "Red", "SPZ-SIR-3001" ],
+  [ "Oliver Grant", "Cannondale", "Quick 4", "Green", "CAN-QCK-4001" ],
+  [ "Emma Collins", "Scott", "Sub Cross 40", "Grey", "SCT-SUB-5001" ],
+  [ "Noah Mitchell", "Merida", "Crossway 20", "Silver", "MER-CRS-6001" ],
+  [ "Sofia Ramirez", "Cube", "Hyde", "Black", "CUB-HYD-7001" ],
+  [ "Ethan Brooks", "Bianchi", "C-Sport 2", "White", "BIA-CSP-8001" ],
+  [ "Chloe Martin", "Orbea", "Vector 20", "Blue", "ORB-VEC-9001" ],
+  [ "Lucas Turner", "Trek", "Marlin 5", "Red", "TRK-MAR-10001" ],
+  [ "Oliver Grant", "Giant", "Talon 2", "Black", "GNT-TAL-11001" ]
 ]
 
-bikes.each do |customer_id, make, model, colour, serial_number|
-  Bike.create!(
-    customer_id: customer_id,
-    make: make,
-    model: model,
-    colour: colour,
-    serial_number: serial_number
-  )
+bike_data.each do |customer_name, make, model, colour, serial|
+  bike = Bike.find_or_initialize_by(serial_number: serial)
+
+  if bike.new_record?
+    bike.assign_attributes(
+      customer: customers_by_name.fetch(customer_name),
+      make: make,
+      model: model,
+      colour: colour
+    )
+
+    bike.save!
+  end
 end
 
-bikes = Bike.order(:id).to_a
+bikes_by_serial = Bike.where(
+  serial_number: bike_data.map(&:last)
+).index_by(&:serial_number)
 
-staff = staff_members.map do |name, _role|
-  Staff.find_by!(name: name)
-end
+same_day = 10.days.ago.change(hour: 9)
+old_repair_date = 2.years.ago
 
-repairs = [
+repair_data = [
   {
-    bike_id: bikes[0].id,
-    staff_id: nil,
+    key: "demo-repair-001",
+    serial: "TRK-FX2-1001",
+    staff: nil,
     status: "Received",
-    approval_status: nil,
+    approval: nil,
     promised_on: Date.current + 2.days
   },
   {
-    bike_id: bikes[1].id,
-    staff_id: staff[0].id,
+    key: "demo-repair-002",
+    serial: "TRK-FX2-1002",
+    staff: "Hank Schrader",
     status: "Assessment",
-    approval_status: nil,
+    approval: nil,
     promised_on: Date.current + 3.days
   },
   {
-    bike_id: bikes[2].id,
-    staff_id: staff[1].id,
+    key: "demo-repair-003",
+    serial: "GNT-ESC-2001",
+    staff: "Walter White",
     status: "Awaiting Approval",
-    approval_status: "awaiting",
+    approval: "awaiting",
     promised_on: Date.current + 2.days,
     quoted_at: 1.day.ago
   },
   {
-    bike_id: bikes[3].id,
-    staff_id: staff[2].id,
+    key: "demo-repair-004",
+    serial: "SPZ-SIR-3001",
+    staff: "Jessie Pinkman",
     status: "In Progress",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: Date.current - 2.days,
     quoted_at: 3.days.ago,
     created_at: 5.days.ago,
     updated_at: 1.day.ago
   },
   {
-    bike_id: bikes[4].id,
-    staff_id: staff[0].id,
+    key: "demo-repair-005",
+    serial: "CAN-QCK-4001",
+    staff: "Hank Schrader",
     status: "Ready",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: Date.current,
     quoted_at: 2.days.ago,
-    created_at: 3.days.ago,
-    updated_at: Time.current
+    created_at: 3.days.ago
   },
   {
-    bike_id: bikes[5].id,
-    staff_id: staff[1].id,
+    key: "demo-repair-006",
+    serial: "SCT-SUB-5001",
+    staff: "Walter White",
     status: "Declined",
-    approval_status: "declined",
+    approval: "declined",
     promised_on: Date.current + 1.day,
     quoted_at: 2.days.ago
   },
   {
-    bike_id: bikes[6].id,
-    staff_id: staff[2].id,
+    key: "demo-repair-007",
+    serial: "MER-CRS-6001",
+    staff: "Jessie Pinkman",
     status: "Picked Up",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: Date.current - 5.days,
     quoted_at: 7.days.ago,
     handed_back_at: 5.days.ago,
     created_at: 8.days.ago,
     updated_at: 5.days.ago
-  }
-]
-
-same_day = 10.days.ago.change(hour: 9)
-old_repair_date = 2.years.ago
-
-repairs += [
+  },
   {
-    bike_id: bikes[7].id,
-    staff_id: staff[0].id,
+    key: "demo-repair-008",
+    serial: "CUB-HYD-7001",
+    staff: "Hank Schrader",
     status: "Picked Up",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: same_day.to_date,
     quoted_at: same_day + 1.hour,
     handed_back_at: same_day + 6.hours,
@@ -239,10 +237,11 @@ repairs += [
     updated_at: same_day + 6.hours
   },
   {
-    bike_id: bikes[0].id,
-    staff_id: staff[1].id,
+    key: "demo-repair-009",
+    serial: "TRK-FX2-1001",
+    staff: "Walter White",
     status: "Picked Up",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: old_repair_date.to_date + 2.days,
     quoted_at: old_repair_date + 2.hours,
     handed_back_at: old_repair_date + 2.days,
@@ -250,35 +249,38 @@ repairs += [
     updated_at: old_repair_date + 2.days
   },
   {
-    bike_id: bikes[8].id,
-    staff_id: staff[2].id,
+    key: "demo-repair-010",
+    serial: "BIA-CSP-8001",
+    staff: "Jessie Pinkman",
     status: "In Progress",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: Date.current + 2.days,
     quoted_at: 1.day.ago
   },
   {
-    bike_id: bikes[9].id,
-    staff_id: staff[0].id,
+    key: "demo-repair-011",
+    serial: "ORB-VEC-9001",
+    staff: "Hank Schrader",
     status: "Ready",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: Date.current - 1.day,
     quoted_at: 4.days.ago,
-    created_at: 5.days.ago,
-    updated_at: Time.current
+    created_at: 5.days.ago
   },
   {
-    bike_id: bikes[11].id,
-    staff_id: staff[1].id,
+    key: "demo-repair-012",
+    serial: "GNT-TAL-11001",
+    staff: "Walter White",
     status: "Assessment",
-    approval_status: nil,
+    approval: nil,
     promised_on: Date.current + 4.days
   },
   {
-    bike_id: bikes[2].id,
-    staff_id: staff[2].id,
+    key: "demo-repair-013",
+    serial: "GNT-ESC-2001",
+    staff: "Jessie Pinkman",
     status: "Picked Up",
-    approval_status: "approved",
+    approval: "approved",
     promised_on: Date.current - 20.days,
     quoted_at: 23.days.ago,
     handed_back_at: 20.days.ago,
@@ -286,10 +288,11 @@ repairs += [
     updated_at: 20.days.ago
   },
   {
-    bike_id: bikes[3].id,
-    staff_id: staff[0].id,
+    key: "demo-repair-014",
+    serial: "SPZ-SIR-3001",
+    staff: "Hank Schrader",
     status: "Picked Up",
-    approval_status: "declined",
+    approval: "declined",
     promised_on: Date.current - 15.days,
     quoted_at: 17.days.ago,
     handed_back_at: 16.days.ago,
@@ -297,101 +300,210 @@ repairs += [
     updated_at: 16.days.ago
   },
   {
-    bike_id: bikes[4].id,
-    staff_id: staff[1].id,
+    key: "demo-repair-015",
+    serial: "CAN-QCK-4001",
+    staff: "Walter White",
     status: "Awaiting Approval",
-    approval_status: "awaiting",
+    approval: "awaiting",
     promised_on: Date.current + 3.days,
     quoted_at: Time.current
   }
 ]
+
+repair_service_data = {
+  "demo-repair-001" => [ [ "Flat Tire Repair", 15.00 ] ],
+  "demo-repair-002" => [ [ "Brake Adjustment", 20.00 ] ],
+  "demo-repair-003" => [ [ "Full Tune-Up", 90.00 ] ],
+  "demo-repair-004" => [
+    [ "Gear Adjustment", 20.00 ],
+    [ "Chain Replacement", 25.00 ]
+  ],
+  "demo-repair-005" => [ [ "Wheel Truing", 25.00 ] ],
+  "demo-repair-006" => [ [ "Bottom Bracket Service", 45.00 ] ],
+  "demo-repair-007" => [
+    [ "Basic Tune-Up", 50.00 ],
+    [ "Brake Pad Replacement", 30.00 ]
+  ],
+  "demo-repair-008" => [ [ "Flat Tire Repair", 15.00 ] ],
+  "demo-repair-009" => [
+    [ "Basic Tune-Up", 40.00 ],
+    [ "Cable Replacement", 20.00 ]
+  ],
+  "demo-repair-010" => [
+    [ "Drivetrain Cleaning", 35.00 ],
+    [ "Chain Lubrication", 12.00 ]
+  ],
+  "demo-repair-011" => [ [ "Wheel Replacement", 50.00 ] ],
+  "demo-repair-012" => [ [ "Headset Adjustment", 20.00 ] ],
+  "demo-repair-013" => [
+    [ "Cassette Replacement", 35.00 ],
+    [ "Chain Replacement", 22.00 ]
+  ],
+  "demo-repair-014" => [ [ "Full Tune-Up", 85.00 ] ],
+  "demo-repair-015" => [ [ "Brake Cable Replacement", 28.00 ] ]
+}
+
+diagnosis_data = {
+  "demo-repair-002" =>
+    "<p><strong>Initial inspection:</strong> front brake is rubbing against the rim.</p>",
+  "demo-repair-003" =>
+    "<p>Drivetrain inspected. Customer approval is required before work begins.</p>",
+  "demo-repair-004" =>
+    "<p><strong>Gear shifting issue confirmed.</strong></p><ul><li>Chain is worn</li><li>Rear derailleur needs adjustment</li></ul>",
+  "demo-repair-005" =>
+    "<p>Rear wheel is slightly out of true. Spoke tension is uneven.</p>",
+  "demo-repair-006" =>
+    "<p><strong>Bottom bracket has excessive play.</strong> Customer declined the proposed repair.</p>",
+  "demo-repair-007" =>
+    "<p>Bike serviced and road tested successfully. Brakes and drivetrain are operating normally.</p>",
+  "demo-repair-008" =>
+    "<p>Rear tire was flat on arrival. Tube inspected and puncture located.</p>",
+  "demo-repair-009" =>
+    "<p><strong>General wear from regular use.</strong></p><ul><li>Chain cleaned</li><li>Cables inspected</li><li>Brakes checked</li></ul>",
+  "demo-repair-010" =>
+    "<p>Drivetrain contains heavy dirt buildup. Chain requires cleaning and lubrication.</p>",
+  "demo-repair-011" =>
+    "<p>Rear wheel is damaged and requires replacement before the bike is safe to ride.</p>",
+  "demo-repair-012" =>
+    "<p>Headset has minor play. Further adjustment is required.</p>",
+  "demo-repair-013" =>
+    "<p><strong>Cassette and chain show significant wear.</strong> Replacement completed.</p>",
+  "demo-repair-014" =>
+    "<p>Full tune-up completed after customer declined additional optional work.</p>",
+  "demo-repair-015" =>
+    "<p>Brake cable is frayed and should be replaced before regular use.</p>"
+}
+
+services_by_name = Service.where(
+  name: service_data.map(&:first)
+).index_by(&:name)
 
 receivers = [
   User.find_by!(email_address: "scarlett@wheelhouse.cl"),
   User.find_by!(email_address: "hank@wheelhouse.cl")
 ]
 
-repairs.each_with_index do |repair_attributes, index|
-  attributes = repair_attributes.dup
-  attributes[:received_by_user] = receivers[index] if index < receivers.length
-  Repair.create!(attributes)
+repairs_by_key = {}
+
+repair_data.each_with_index do |data, index|
+  key = data.fetch(:key)
+  bike = bikes_by_serial.fetch(data.fetch(:serial))
+  staff_member = data[:staff] ? staff_by_name.fetch(data[:staff]) : nil
+
+  repair = Repair.find_by(seed_key: key)
+
+  if repair.nil?
+    candidates = Repair.where(
+      seed_key: nil,
+      bike_id: bike.id,
+      staff_id: staff_member&.id,
+      status: data.fetch(:status),
+      approval_status: data[:approval]
+    )
+
+    expected_services = repair_service_data.fetch(key).map(&:first).sort
+
+    candidates = candidates.select do |candidate|
+      actual_services = candidate.repair_services
+        .includes(:service)
+        .map { |association| association.service.name }
+        .sort
+
+      next false unless actual_services == expected_services
+
+      if data[:created_at]
+        next false unless candidate.created_at.to_date == data[:created_at].to_date
+      end
+
+      true
+    end
+
+    if candidates.size > 1
+      raise "Ambiguous legacy repair match for #{key}"
+    end
+
+    repair = candidates.first
+  end
+
+  if repair
+    repair.update!(seed_key: key) if repair.seed_key.nil?
+  else
+    attributes = {
+      seed_key: key,
+      bike: bike,
+      staff: staff_member,
+      status: data.fetch(:status),
+      approval_status: data[:approval],
+      promised_on: data[:promised_on],
+      quoted_at: data[:quoted_at],
+      handed_back_at: data[:handed_back_at]
+    }
+
+    attributes[:received_by_user] = receivers[index] if index < receivers.length
+    attributes[:created_at] = data[:created_at] if data[:created_at]
+    attributes[:updated_at] = data[:updated_at] if data[:updated_at]
+
+    repair = Repair.create!(attributes)
+  end
+
+  repairs_by_key[key] = repair
 end
 
-repairs = Repair.order(:id).to_a
-services = Service.order(:name).to_a
-service_by_name = services.index_by(&:name)
+repair_service_data.each do |key, entries|
+  repair = repairs_by_key.fetch(key)
 
-repair_services = [
-  [ repairs[0].id, service_by_name["Flat Tire Repair"].id, 15.00 ],
-  [ repairs[1].id, service_by_name["Brake Adjustment"].id, 20.00 ],
-  [ repairs[2].id, service_by_name["Full Tune-Up"].id, 90.00 ],
-  [ repairs[3].id, service_by_name["Gear Adjustment"].id, 20.00 ],
-  [ repairs[3].id, service_by_name["Chain Replacement"].id, 25.00 ],
-  [ repairs[4].id, service_by_name["Wheel Truing"].id, 25.00 ],
-  [ repairs[5].id, service_by_name["Bottom Bracket Service"].id, 45.00 ],
-  [ repairs[6].id, service_by_name["Basic Tune-Up"].id, 50.00 ],
-  [ repairs[6].id, service_by_name["Brake Pad Replacement"].id, 30.00 ],
-  [ repairs[7].id, service_by_name["Flat Tire Repair"].id, 15.00 ],
-  [ repairs[8].id, service_by_name["Basic Tune-Up"].id, 40.00 ],
-  [ repairs[8].id, service_by_name["Cable Replacement"].id, 20.00 ],
-  [ repairs[9].id, service_by_name["Drivetrain Cleaning"].id, 35.00 ],
-  [ repairs[9].id, service_by_name["Chain Lubrication"].id, 12.00 ],
-  [ repairs[10].id, service_by_name["Wheel Replacement"].id, 50.00 ],
-  [ repairs[11].id, service_by_name["Headset Adjustment"].id, 20.00 ],
-  [ repairs[12].id, service_by_name["Cassette Replacement"].id, 35.00 ],
-  [ repairs[12].id, service_by_name["Chain Replacement"].id, 22.00 ],
-  [ repairs[13].id, service_by_name["Full Tune-Up"].id, 85.00 ],
-  [ repairs[14].id, service_by_name["Brake Cable Replacement"].id, 28.00 ]
-]
+  entries.each do |service_name, price|
+    service = services_by_name.fetch(service_name)
 
-repair_services.each do |repair_id, service_id, charged_price|
-  RepairService.create!(
-    repair_id: repair_id,
-    service_id: service_id,
-    charged_price: charged_price
-  )
+    association = RepairService.find_or_initialize_by(
+      repair: repair,
+      service: service
+    )
+
+    if association.new_record?
+      association.charged_price = price
+      association.save!
+    end
+  end
 end
 
-diagnoses = {
-  1 => nil,
-  2 => "<p><strong>Initial inspection:</strong>front brake is rubbing against the rim.</p>",
-  3 => "<p>Drivetrain inspected. Customer approval is required before work begins.</p>",
-  4 => "<p><strong>Gear shifting issue confirmed.</strong></p><ul><li>Chain is worn</li><li>Rear derailleur needs adjustment</li></ul>",
-  5 => "<p>Rear wheel is slightly out of true. Spoke tension is uneven.</p>",
-  6 => "<p><strong>Bottom bracket has excessive play.</strong> Customer declined the proposed repair.</p>",
-  7 => "<p>Bike serviced and road tested successfully. Brakes and drivetrain are operating normally.</p>",
-  8 => "<p>Rear tire was flat on arrival. Tube inspected and puncture located.</p>",
-  9 => "<p><strong>General wear from regular use.</strong></p><ul><li>Chain cleaned</li><li>Cables inspected</li><li>Brakes checked</li></ul>",
-  10 => "<p>Drivetrain contains heavy dirt buildup. Chain requires cleaning and lubrication.</p>",
-  11 => "<p>Rear wheel is damaged and requires replacement before the bike is safe to ride.</p>",
-  12 => "<p>Headset has minor play. Further adjustment is required.</p>",
-  13 => "<p><strong>Cassette and chain show significant wear.</strong> Replacement completed.</p>",
-  14 => "<p>Full tune-up completed after customer declined additional optional work.</p>",
-  15 => "<p>Brake cable is frayed and should be replaced before regular use.</p>"
-}
+diagnosis_data.each do |key, html|
+  repair = repairs_by_key.fetch(key)
 
-diagnoses.each do |repair_number, diagnosis|
-  next if diagnosis.nil?
+  next if repair.diagnosis.present?
 
-  repair = repairs[repair_number - 1]
-  repair.diagnosis = diagnosis
-  repair.diagnosis.save!
+  repair.diagnosis = html
+  repair.save!
 end
 
 seed_image_path = Rails.root.join("db", "seeds", "intake-bike.jpg")
 
-raise "Missing seed image: #{seed_image_path}" unless File.exist?(seed_image_path)
+if File.exist?(seed_image_path)
+  repair_data.first(10).each_with_index do |data, index|
+    repair = repairs_by_key.fetch(data.fetch(:key))
+    desired_count = index.zero? ? 4 : 1
+    existing_count = repair.intake_photos.count
 
-repairs.first(10).each_with_index do |repair, index|
-  photo_count = index.zero? ? 4 : 1
+    next if existing_count >= desired_count
 
-  photo_count.times do |photo_index|
-    File.open(seed_image_path, "rb") do |file|
-      repair.intake_photos.attach(
-        io: file,
-        filename: "repair-#{repair.id}-intake-#{photo_index + 1}.jpg",
-        content_type: "image/jpeg"
-      )
+    (existing_count...desired_count).each do |photo_index|
+      File.open(seed_image_path, "rb") do |file|
+        repair.intake_photos.attach(
+          io: file,
+          filename: "#{data.fetch(:key)}-intake-#{photo_index + 1}.jpg",
+          content_type: "image/jpeg"
+        )
+      end
     end
   end
 end
+
+puts "Database seeds completed."
+puts "Services: #{Service.count}"
+puts "Staff: #{Staff.count}"
+puts "Users: #{User.count}"
+puts "Customers: #{Customer.count}"
+puts "Bikes: #{Bike.count}"
+puts "Repairs: #{Repair.count}"
+puts "Repair services: #{RepairService.count}"
+puts "Seeded repairs: #{Repair.where.not(seed_key: nil).count}"

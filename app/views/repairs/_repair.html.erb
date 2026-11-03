@@ -10,13 +10,21 @@
   </td>
 
   <td>
-    <%= link_to "#{repair.bike.make} #{repair.bike.model}",
-      bike_path(repair.bike) %>
+    <% if policy(repair.bike).show? %>
+      <%= link_to "#{repair.bike.make} #{repair.bike.model}",
+        bike_path(repair.bike) %>
+    <% else %>
+      <%= "#{repair.bike.make} #{repair.bike.model}" %>
+    <% end %>
   </td>
 
   <td>
-    <%= link_to repair.bike.customer.name,
-      customer_path(repair.bike.customer) %>
+    <% if policy(repair.bike.customer).show? %>
+      <%= link_to repair.bike.customer.name,
+        customer_path(repair.bike.customer) %>
+    <% else %>
+      <%= repair.bike.customer.name %>
+    <% end %>
   </td>
 
   <td>
@@ -49,8 +57,10 @@
   </td>
 
   <td>
-    <%= link_to "View",
-      repair_path(repair),
-      class: "btn btn-primary btn-sm" %>
+    <% if policy(repair).show? %>
+      <%= link_to "View",
+        repair_path(repair),
+        class: "btn btn-primary btn-sm" %>
+    <% end %>
   </td>
 </tr>

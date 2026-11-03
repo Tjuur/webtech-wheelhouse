@@ -1,101 +1,190 @@
-# Decisions
+Authorization Design Decisions
 
-## Can a Repair Include Work That Is Not on the Standard Service List?
+1. Authorization Library
 
-The description explains that the shop has a standard list of services and prices, but it does not specify whether every repair must use only those predefined services. I assumed that all charged work must correspond to a service on the standard list.
+Decision: Use Pundit for application authorization.
 
-If mechanics are allowed to add custom work that is not on the service list, the model would need to change so that a repair can store a custom service description and price without requiring an existing Service record.
+Pundit provides model-specific policies that separate authorization logic from controllers and views.
 
-## Can Multiple Mechanics Work on a Repair?
+This approach centralizes permission rules and makes them independently testable.
 
-There were no specifications on how many mechanics may work on a single repair, so I assumed that only one mechanic can be assigned to each repair.
+Each protected resource has a corresponding policy:
 
-If more than one mechanic can work on a repair, the relationship between mechanics and repairs would need to change to many-to-many.
+* CustomerPolicy
+* BikePolicy
+* RepairPolicy
+* ServicePolicy
+* StaffPolicy
 
-## Does the Ownership History Matter?
+Policies deny access by default unless a specific action is explicitly permitted.
 
-I assumed not, since it wasn't explicitly stated in the description.
+2. Role-Based Authorization
 
-If ownership history were required, a new table would be needed to record customer IDs, bike IDs, and ownership dates.
+Decision: Use the existing user roles to determine general permissions.
 
-# Lab 11 — Authentication and Security
+Wheelhouse defines three roles:
 
-## Why Use Rails Native Authentication?
+* owner
+* counter
+* mechanic
 
-I decided to use Rails 8's built-in authentication generator instead of implementing authentication manually or using an external gem.
+The owner role has full administrative permissions.
 
-This provides password hashing, session management, and password-reset functionality while keeping the implementation consistent with Rails conventions.
+The counter role supports customer management, bicycle management, and repair intake.
 
-## Why Separate Users from Staff?
+The mechanic role supports repair work without granting access to unrelated customer or administrative information.
 
-A Staff record represents a person working at the repair shop, while a User represents an account that can authenticate.
+Role checks are implemented through Pundit policies rather than being duplicated across controllers.
 
-I kept these models separate because not every user necessarily represents a staff member.
+3. Repair Assignment Restrictions
 
-Each user can optionally belong to one staff member, but each staff member can have at most one user account.
+Decision: Restrict mechanic access to repairs assigned to their staff record.
 
-The database enforces this restriction through a unique index on `users.staff_id`.
+Mechanics can access a repair only when its staff_id corresponds to the staff record associated with their user account.
 
-## Why Use a Default Role?
+This restriction applies to both collection queries and individual record actions.
 
-New accounts receive the `counter` role by default.
+A missing staff association does not grant access to unassigned repairs.
 
-This follows the principle of least privilege by avoiding automatic assignment of the `owner` role.
+This prevents mechanics from accessing unrelated work orders.
 
-Roles are defined through an enum in the User model, allowing the application to use consistent role values.
+4. Completed Repair Restrictions
 
-Registration does not permit users to assign their own roles or staff associations.
+Decision: Prevent counter users and mechanics from editing repairs with the picked_up status.
 
-## Why Require Authentication for Most Pages?
+Picked-up repairs represent completed work orders.
 
-Customer information, repairs, bikes, and staff records are internal workshop data.
+Restricting further changes helps preserve their operational history.
 
-For that reason, these pages require an authenticated browser session.
+Owners retain administrative access to these records.
 
-The service catalog remains public because customers should be able to view available services and prices without creating an account.
+The restriction is enforced by authorization policies rather than relying exclusively on disabled form controls.
 
-The sign-in, registration, and password recovery pages are also publicly accessible.
+5. Policy-Based Strong Parameters
 
-## Why Track the User Who Received a Repair?
+Decision: Determine permitted repair attributes according to the current user’s authorization policy.
 
-The staff member assigned to perform a repair is not necessarily the person who received the bicycle.
+Mechanics can modify only:
 
-I added a separate `received_by_user` association to distinguish these responsibilities.
+%i[status diagnosis intake_photos]
 
-The receiving user is automatically assigned using `Current.user` when a repair is created.
+Owners and counter users may modify the attributes permitted by their respective policies.
 
-The field is not included in permitted form parameters, preventing users from submitting an arbitrary receiver ID.
+This prevents unauthorized changes through manually constructed HTTP requests.
 
-The association is optional so repairs created before Lab 11 remain valid.
+Strong parameter restrictions complement policy authorization; they do not replace it.
 
-## Why Use Password-Reset Tokens?
+6. Policy Scopes
 
-Password recovery uses Rails' built-in password-reset tokens rather than storing temporary passwords.
+Decision: Use Pundit policy scopes for collection queries.
 
-The tokens expire after 15 minutes and become invalid when the account password changes.
+Policy scopes ensure that users receive only records they are authorized to view.
 
-The password-reset request displays the same confirmation message regardless of whether the email address exists, reducing account enumeration.
+For repairs:
 
-## Why Send Emails Asynchronously?
+* Owners can view all repairs.
+* Counter users can view all repairs.
+* Mechanics can view only assigned repairs.
 
-Welcome and password-reset emails use `deliver_later`.
+The same authorization principles apply to individual record access.
 
-This allows the application to queue email delivery without waiting for it to finish during the HTTP request.
+Collection queries use eager loading where appropriate to avoid unnecessary database queries.
 
-In development, the asynchronous Active Job adapter processes these jobs locally.
+7. Public Service Catalog
 
-## Why Store Development Emails Locally?
+Decision: Allow unauthenticated access to the service catalog’s index and show actions.
 
-I chose Rails' file delivery method because the assignment does not require an external email provider.
+Visitors can browse available services without creating an account.
 
-Emails are written to `tmp/sent_emails/`, allowing their contents and reset links to be inspected without sending real messages.
+Creating, editing, and deleting services remain restricted to owners.
 
-Both welcome and password-reset emails include HTML and plaintext versions.
+Other protected resources require authentication.
 
-## Why Keep API Authentication Separate?
+This separates public catalog functionality from administrative operations.
 
-The JSON API already uses Bearer tokens stored in Rails encrypted credentials.
+8. Unauthorized Requests
 
-I preserved that authentication mechanism rather than requiring browser sessions for API requests.
+Decision: Return HTTP 403 Forbidden for authenticated users who lack permission.
 
-This keeps the API usable by external clients while allowing the HTML application to use cookie-based sessions.
+Pundit’s NotAuthorizedError is handled centrally.
+
+The response uses the application layout and communicates that the requested action is forbidden.
+
+Unauthenticated users attempting to access protected resources are redirected to login.
+
+This distinguishes authentication failures from authorization failures.
+
+9. Interface Permissions
+
+Decision: Use policy checks to control navigation and action visibility.
+
+Users should not see controls for operations they cannot perform.
+
+Examples include:
+
+* Hiding customer management from mechanics.
+* Hiding delete actions from counter users.
+* Hiding administrative actions from non-owners.
+* Restricting repair editing controls according to assignment and status.
+
+Controller authorization remains authoritative.
+
+Hiding a link or button does not constitute a security boundary.
+
+10. Seed Data
+
+Decision: Use idempotent seeds that preserve existing application records.
+
+The seed implementation uses stable identifiers to locate existing demo records.
+
+Repairs are identified by the seed_key attribute.
+
+The implementation also supports associating legacy demo repairs with their seed keys when an unambiguous match is available.
+
+Seed execution does not delete existing records or reset existing account passwords.
+
+The demo dataset includes:
+
+* Owner, counter, and mechanic accounts.
+* Customers and bicycles.
+* Assigned and unassigned repairs.
+* Repairs in different lifecycle states.
+* Completed and unfinished repairs.
+* Repair services, diagnoses, and intake photos.
+
+Running the seed task repeatedly should not create additional copies of the demo dataset.
+
+11. Authorization Testing
+
+Decision: Verify authorization at both the policy and HTTP request levels.
+
+Policy tests validate individual authorization rules and scopes.
+
+Integration tests verify that the application enforces those rules through its controllers.
+
+The tests include cases involving:
+
+* Different user roles.
+* Assigned and unassigned repairs.
+* Completed repairs.
+* Unauthorized modifications.
+* Public service endpoints.
+* HTTP 403 responses.
+
+The verified suite contains 56 tests and 213 assertions, with zero failures, errors, or skips.
+
+12. Security and Maintainability
+
+Decision: Keep authorization rules centralized and explicit.
+
+The implementation prioritizes:
+
+* Deny-by-default policies.
+* Consistent authorization checks.
+* Restricted strong parameters.
+* Record-level access control.
+* Policy-scoped collection queries.
+* Clear HTTP error handling.
+* Automated authorization testing.
+
+These decisions reduce duplicated logic and make future permission changes easier to review and maintain.

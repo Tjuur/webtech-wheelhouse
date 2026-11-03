@@ -2,6 +2,10 @@
   <td><%= customer.name %></td>
   <td><%= customer.phone %></td>
   <td>
-    <%= link_to "View", customer_path(customer), class: "btn btn-primary btn-sm" %>
+    <% if policy(customer).show? %>
+      <%= link_to "View",
+        customer_path(customer),
+        class: "btn btn-primary btn-sm" %>
+    <% end %>
   </td>
 </tr>

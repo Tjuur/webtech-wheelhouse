@@ -1,4 +1,8 @@
-<%= link_to "New Bike", new_bike_path, class: "btn btn-primary mb-3" %>
+<% if policy(Bike).create? %>
+  <%= link_to "New Bike",
+    new_bike_path,
+    class: "btn btn-primary mb-3" %>
+<% end %>
 
 <h1>Bikes</h1>
 

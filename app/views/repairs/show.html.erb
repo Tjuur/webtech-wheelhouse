@@ -5,18 +5,32 @@
 <dl class="row">
   <dt class="col-sm-3">Bike</dt>
   <dd class="col-sm-9">
-    <%= link_to "#{@repair.bike.make} #{@repair.bike.model}", bike_path(@repair.bike) %>
+    <% if policy(@repair.bike).show? %>
+      <%= link_to "#{@repair.bike.make} #{@repair.bike.model}",
+        bike_path(@repair.bike) %>
+    <% else %>
+      <%= "#{@repair.bike.make} #{@repair.bike.model}" %>
+    <% end %>
   </dd>
 
   <dt class="col-sm-3">Customer</dt>
   <dd class="col-sm-9">
-    <%= link_to @repair.bike.customer.name, customer_path(@repair.bike.customer) %>
+    <% if policy(@repair.bike.customer).show? %>
+      <%= link_to @repair.bike.customer.name,
+        customer_path(@repair.bike.customer) %>
+    <% else %>
+      <%= @repair.bike.customer.name %>
+    <% end %>
   </dd>
 
   <dt class="col-sm-3">Staff</dt>
   <dd class="col-sm-9">
     <% if @repair.staff.present? %>
-      <%= link_to @repair.staff.name, staff_path(@repair.staff) %>
+      <% if policy(@repair.staff).show? %>
+        <%= link_to @repair.staff.name, staff_path(@repair.staff) %>
+      <% else %>
+        <%= @repair.staff.name %>
+      <% end %>
     <% else %>
       Not assigned
     <% end %>
@@ -76,17 +90,19 @@
               class: "card-img-top img-fluid" %>
           <% end %>
 
-          <div class="card-body">
-            <%= button_to "Remove Photo",
-              repair_intake_photo_path(@repair, attachment_id: photo.id),
-              method: :delete,
-              class: "btn btn-outline-danger btn-sm",
-              form: {
-                data: {
-                  turbo_confirm: "Remove this intake photo?"
-                }
-              } %>
-          </div>
+          <% if policy(@repair).destroy_intake_photo? %>
+            <div class="card-body">
+              <%= button_to "Remove Photo",
+                repair_intake_photo_path(@repair, attachment_id: photo.id),
+                method: :delete,
+                class: "btn btn-outline-danger btn-sm",
+                form: {
+                  data: {
+                    turbo_confirm: "Remove this intake photo?"
+                  }
+                } %>
+            </div>
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -132,19 +148,23 @@
 <% end %>
 
 <div class="d-flex gap-2 mt-3">
-  <%= link_to "Edit Repair",
-    edit_repair_path(@repair),
-    class: "btn btn-primary" %>
+  <% if policy(@repair).update? %>
+    <%= link_to "Edit Repair",
+      edit_repair_path(@repair),
+      class: "btn btn-primary" %>
+  <% end %>
 
-  <%= button_to "Delete Repair",
-    repair_path(@repair),
-    method: :delete,
-    class: "btn btn-danger",
-    form: {
-      data: {
-        turbo_confirm: "Delete repair ##{@repair.id}?"
-      }
-    } %>
+  <% if policy(@repair).destroy? %>
+    <%= button_to "Delete Repair",
+      repair_path(@repair),
+      method: :delete,
+      class: "btn btn-danger",
+      form: {
+        data: {
+          turbo_confirm: "Delete repair ##{@repair.id}?"
+        }
+      } %>
+  <% end %>
 
   <%= link_to "Back to Repairs",
     repairs_path,

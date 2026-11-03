@@ -51,20 +51,26 @@
                     class: "nav-link #{'active' if current_page?(root_path)}" %>
               </li>
 
-              <li class="nav-item">
-                <%= link_to "Customers", customers_path,
-                    class: "nav-link #{'active' if controller_name == 'customers'}" %>
-              </li>
+              <% if policy(Customer).index? %>
+                <li class="nav-item">
+                  <%= link_to "Customers", customers_path,
+                      class: "nav-link #{'active' if controller_name == 'customers'}" %>
+                </li>
+              <% end %>
 
-              <li class="nav-item">
-                <%= link_to "Bikes", bikes_path,
-                    class: "nav-link #{'active' if controller_name == 'bikes'}" %>
-              </li>
+              <% if policy(Bike).index? %>
+                <li class="nav-item">
+                  <%= link_to "Bikes", bikes_path,
+                      class: "nav-link #{'active' if controller_name == 'bikes'}" %>
+                </li>
+              <% end %>
 
-              <li class="nav-item">
-                <%= link_to "Repairs", repairs_path,
-                    class: "nav-link #{'active' if controller_name == 'repairs'}" %>
-              </li>
+              <% if policy(Repair).index? %>
+                <li class="nav-item">
+                  <%= link_to "Repairs", repairs_path,
+                      class: "nav-link #{'active' if controller_name == 'repairs'}" %>
+                </li>
+              <% end %>
 
               <li class="nav-item">
                 <%= link_to "Services", services_path,

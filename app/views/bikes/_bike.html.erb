@@ -3,10 +3,21 @@
   <td><%= bike.model %></td>
   <td><%= bike.colour %></td>
   <td><%= bike.serial_number %></td>
+
   <td>
-    <%= link_to bike.customer.name, customer_path(bike.customer) %>
+    <% if policy(bike.customer).show? %>
+      <%= link_to bike.customer.name,
+        customer_path(bike.customer) %>
+    <% else %>
+      <%= bike.customer.name %>
+    <% end %>
   </td>
+
   <td>
-    <%= link_to "View", bike_path(bike), class: "btn btn-primary btn-sm" %>
+    <% if policy(bike).show? %>
+      <%= link_to "View",
+        bike_path(bike),
+        class: "btn btn-primary btn-sm" %>
+    <% end %>
   </td>
 </tr>

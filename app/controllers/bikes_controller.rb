@@ -3,11 +3,16 @@ class BikesController < ApplicationController
   before_action :set_customers, only: [ :new, :create, :edit, :update ]
 
   def index
-    @bikes = Bike.includes(:customer).by_make_and_model
+    authorize Bike
+    @bikes = policy_scope(Bike)
+      .includes(:customer)
+      .by_make_and_model
   end
 
   def show
-    @repairs = @bike.repairs
+    authorize @bike
+
+    @repairs = policy_scope(@bike.repairs)
       .includes(bike: :customer)
       .with_attached_intake_photos
       .with_rich_text_diagnosis
@@ -16,10 +21,13 @@ class BikesController < ApplicationController
 
   def new
     @bike = Bike.new(customer_id: params[:customer_id])
+    authorize @bike
   end
 
   def create
-    @bike = Bike.new(bike_params)
+    @bike = Bike.new
+    authorize @bike
+    @bike.assign_attributes(bike_params)
 
     if @bike.save
       redirect_to @bike,
@@ -30,9 +38,12 @@ class BikesController < ApplicationController
   end
 
   def edit
+    authorize @bike
   end
 
   def update
+    authorize @bike
+
     if @bike.update(bike_params)
       redirect_to @bike,
         notice: "Bike #{@bike.serial_number} was updated."
@@ -42,6 +53,7 @@ class BikesController < ApplicationController
   end
 
   def destroy
+    authorize @bike
     serial_number = @bike.serial_number
 
     if @bike.destroy

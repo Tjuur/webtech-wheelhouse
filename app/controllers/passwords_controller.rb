@@ -1,4 +1,5 @@
 class PasswordsController < ApplicationController
+  skip_after_action :verify_pundit_authorization
   allow_unauthenticated_access
 
   before_action :set_user_by_token, only: %i[edit update]

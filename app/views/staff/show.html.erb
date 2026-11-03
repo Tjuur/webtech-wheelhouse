@@ -3,65 +3,87 @@
 <h1><%= @staff_member.name %></h1>
 
 <dl class="row">
-	<dt class="col-sm-3">Role</dt>
-	<dd class="col-sm-9"><%= @staff_member.role %></dd>
+  <dt class="col-sm-3">Role</dt>
+  <dd class="col-sm-9"><%= @staff_member.role %></dd>
 </dl>
 
 <h2>Repairs</h2>
 
 <% if @repairs.any? %>
-	<table class="table table-striped">
-		<thead>
-			<tr>
-				<th>Repair</th>
-				<th>Bike</th>
-				<th>Customer</th>
-				<th>Status</th>
-				<th>Promised Date</th>
-			</tr>
-		</thead>
-		<tbody>
-			<% @repairs.each do |repair| %>
-				<tr>
-					<td>
-						<%= link_to "Repair ##{repair.id}", repair_path(repair) %>
-					</td>
-					<td>
-						<%= link_to "#{repair.bike.make} #{repair.bike.model}",
-							bike_path(repair.bike) %>
-					</td>
-					<td>
-						<%= link_to repair.bike.customer.name,
-							customer_path(repair.bike.customer) %>
-					</td>
-					<td><%= repair.status %></td>
-					<td>
-						<%= repair.promised_on&.strftime("%d %b %Y") || "Not set" %>
-					</td>
-				</tr>
-			<% end %>
-		</tbody>
-	</table>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Repair</th>
+        <th>Bike</th>
+        <th>Customer</th>
+        <th>Status</th>
+        <th>Promised Date</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <% @repairs.each do |repair| %>
+        <tr>
+          <td>
+            <% if policy(repair).show? %>
+              <%= link_to "Repair ##{repair.id}",
+                repair_path(repair) %>
+            <% else %>
+              Repair #<%= repair.id %>
+            <% end %>
+          </td>
+
+          <td>
+            <% if policy(repair.bike).show? %>
+              <%= link_to "#{repair.bike.make} #{repair.bike.model}",
+                bike_path(repair.bike) %>
+            <% else %>
+              <%= "#{repair.bike.make} #{repair.bike.model}" %>
+            <% end %>
+          </td>
+
+          <td>
+            <% if policy(repair.bike.customer).show? %>
+              <%= link_to repair.bike.customer.name,
+                customer_path(repair.bike.customer) %>
+            <% else %>
+              <%= repair.bike.customer.name %>
+            <% end %>
+          </td>
+
+          <td><%= repair.status %></td>
+
+          <td>
+            <%= repair.promised_on&.strftime("%d %b %Y") || "Not set" %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
 <% else %>
-	<p>This staff member has no assigned repairs.</p>
+  <p>This staff member has no repairs you can access.</p>
 <% end %>
 
 <div class="d-flex gap-2 mt-3">
-	<%= link_to "Edit Staff Member",
-		edit_staff_path(@staff_member),
-		class: "btn btn-primary" %>
+  <% if policy(@staff_member).update? %>
+    <%= link_to "Edit Staff Member",
+      edit_staff_path(@staff_member),
+      class: "btn btn-primary" %>
+  <% end %>
 
-	<%= button_to "Delete Staff Member",
-		staff_path(@staff_member),
-		method: :delete,
-		class: "btn btn-danger",
-		form: {
-			data: {
-				turbo_confirm: "Delete staff member #{@staff_member.name}?"
-			}
-		} %>
+  <% if policy(@staff_member).destroy? %>
+    <%= button_to "Delete Staff Member",
+      staff_path(@staff_member),
+      method: :delete,
+      class: "btn btn-danger",
+      form: {
+        data: {
+          turbo_confirm: "Delete staff member #{@staff_member.name}?"
+        }
+      } %>
+  <% end %>
 
-	<%= link_to "Back to Staff",
-		staff_index_path,
-		class: "btn btn-secondary" %>
+  <%= link_to "Back to Staff",
+    staff_index_path,
+    class: "btn btn-secondary" %>
 </div>

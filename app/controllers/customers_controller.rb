@@ -2,19 +2,24 @@ class CustomersController < ApplicationController
   before_action :set_customer, only: [ :show, :edit, :update, :destroy ]
 
   def index
-    @customers = Customer.by_name
+    authorize Customer
+    @customers = policy_scope(Customer).by_name
   end
 
   def show
+    authorize @customer
     @bikes = @customer.bikes.order(:make, :model)
   end
 
   def new
     @customer = Customer.new
+    authorize @customer
   end
 
   def create
-    @customer = Customer.new(customer_params)
+    @customer = Customer.new
+    authorize @customer
+    @customer.assign_attributes(customer_params)
 
     if @customer.save
       redirect_to @customer,
@@ -25,9 +30,12 @@ class CustomersController < ApplicationController
   end
 
   def edit
+    authorize @customer
   end
 
   def update
+    authorize @customer
+
     if @customer.update(customer_params)
       redirect_to @customer,
         notice: "Customer #{@customer.name} was updated."
@@ -37,6 +45,7 @@ class CustomersController < ApplicationController
   end
 
   def destroy
+    authorize @customer
     customer_name = @customer.name
 
     if @customer.destroy

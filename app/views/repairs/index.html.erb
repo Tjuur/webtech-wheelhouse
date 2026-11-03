@@ -1,4 +1,6 @@
-<%= link_to "New Repair", new_repair_path, class: "btn btn-primary mb-3" %>
+<% if policy(Repair).create? %>
+  <%= link_to "New Repair", new_repair_path, class: "btn btn-primary mb-3" %>
+<% end %>
 
 <h1>Repairs</h1>
 

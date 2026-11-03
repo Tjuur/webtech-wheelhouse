@@ -1,11 +1,14 @@
 class RepairsController < ApplicationController
   before_action :set_repair, only: [ :show, :edit, :update, :destroy ]
   before_action :set_repair_for_photo, only: [ :destroy_intake_photo ]
-  before_action :set_form_options, only: [ :new, :create, :edit, :update ]
 
   def index
-    @repairs = Repair
+    authorize Repair
+
+    @repairs = policy_scope(Repair)
       .includes(
+        :staff,
+        :repair_services,
         { received_by_user: :staff },
         { bike: :customer }
       )
@@ -15,6 +18,8 @@ class RepairsController < ApplicationController
   end
 
   def show
+    authorize @repair
+
     @repair_services = @repair.repair_services.sort_by do |repair_service|
       repair_service.service.name
     end
@@ -22,15 +27,17 @@ class RepairsController < ApplicationController
 
   def new
     @repair = Repair.new(bike_id: params[:bike_id])
+    authorize @repair
 
-    3.times do
-      @repair.repair_services.build
-    end
+    set_form_options
+    ensure_empty_lines
   end
 
   def create
-    @repair = Repair.new(repair_attributes_without_photos)
+    @repair = Repair.new
+    authorize @repair
 
+    @repair.assign_attributes(repair_attributes_without_photos)
     @repair.received_by_user = Current.user
     @repair.intake_photos = submitted_photos
 
@@ -38,16 +45,22 @@ class RepairsController < ApplicationController
       redirect_to @repair,
         notice: "Repair ##{@repair.id} was created."
     else
+      set_form_options
       ensure_empty_lines
       render :new, status: :unprocessable_entity
     end
   end
 
   def edit
+    authorize @repair
+
+    set_form_options
     ensure_empty_lines
   end
 
   def update
+    authorize @repair
+
     @repair.assign_attributes(repair_attributes_without_photos)
 
     if submitted_photos.any?
@@ -58,12 +71,15 @@ class RepairsController < ApplicationController
       redirect_to @repair,
         notice: "Repair ##{@repair.id} was updated."
     else
+      set_form_options
       ensure_empty_lines
       render :edit, status: :unprocessable_entity
     end
   end
 
   def destroy
+    authorize @repair
+
     repair_id = @repair.id
 
     if @repair.destroy
@@ -78,6 +94,8 @@ class RepairsController < ApplicationController
   end
 
   def destroy_intake_photo
+    authorize @repair, :destroy_intake_photo?
+
     photo = @repair.intake_photos.attachments.find(params[:attachment_id])
     photo.purge
 
@@ -92,7 +110,7 @@ class RepairsController < ApplicationController
     @repair = Repair
       .includes(
         :staff,
-        :received_by_user,
+        { received_by_user: :staff },
         { bike: :customer },
         { repair_services: :service }
       )
@@ -106,9 +124,27 @@ class RepairsController < ApplicationController
   end
 
   def set_form_options
-    @bikes = Bike.includes(:customer).by_make_and_model
-    @staff = Staff.mechanics.by_name
-    @services = Service.by_name
+    editable_attributes = policy(@repair).permitted_attributes
+
+    @bikes = if editable_attributes.include?(:bike_id)
+      Bike.includes(:customer).by_make_and_model
+    else
+      Bike.none
+    end
+
+    @staff = if editable_attributes.include?(:staff_id)
+      Staff.mechanics.by_name
+    else
+      Staff.none
+    end
+
+    @services = if editable_attributes.any? { |attribute|
+      attribute.is_a?(Hash) && attribute.key?(:repair_services_attributes)
+    }
+      Service.by_name
+    else
+      Service.none
+    end
   end
 
   def ensure_empty_lines
@@ -120,25 +156,7 @@ class RepairsController < ApplicationController
   end
 
   def repair_params
-    params.expect(
-      repair: [
-        :bike_id,
-        :staff_id,
-        :status,
-        :approval_status,
-        :promised_on,
-        :quoted_at,
-        :handed_back_at,
-        :diagnosis,
-        intake_photos: [],
-        repair_services_attributes: [ [
-          :id,
-          :service_id,
-          :charged_price,
-          :_destroy
-        ] ]
-      ]
-    )
+    params.require(:repair).permit(*policy(@repair).permitted_attributes)
   end
 
   def repair_attributes_without_photos

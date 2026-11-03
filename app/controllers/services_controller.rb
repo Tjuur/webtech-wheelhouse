@@ -4,21 +4,33 @@ class ServicesController < ApplicationController
   before_action :set_service, only: [ :show, :edit, :update, :destroy ]
 
   def index
-    @services = Service.by_name
+    authorize Service
+    @services = policy_scope(Service).by_name
   end
 
   def show
-    @repair_services = @service.repair_services
-      .includes(repair: :bike)
-      .newest_first
+    authorize @service
+
+    @repair_services = if policy(@service).view_repair_history?
+      @service.repair_services
+        .joins(:repair)
+        .merge(policy_scope(Repair))
+        .includes(repair: { bike: :customer })
+        .newest_first
+    else
+      RepairService.none
+    end
   end
 
   def new
     @service = Service.new
+    authorize @service
   end
 
   def create
-    @service = Service.new(service_params)
+    @service = Service.new
+    authorize @service
+    @service.assign_attributes(service_params)
 
     if @service.save
       redirect_to @service,
@@ -29,9 +41,12 @@ class ServicesController < ApplicationController
   end
 
   def edit
+    authorize @service
   end
 
   def update
+    authorize @service
+
     if @service.update(service_params)
       redirect_to @service,
         notice: "Service #{@service.name} was updated."
@@ -41,6 +56,7 @@ class ServicesController < ApplicationController
   end
 
   def destroy
+    authorize @service
     service_name = @service.name
 
     if @service.destroy

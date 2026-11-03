@@ -1,55 +1,43 @@
 # Wheelhouse
 
-Wheelhouse is a web application for a neighbourhood bicycle repair shop, developed using Ruby on Rails.
-
-The application manages customers, bikes, repairs, services, staff, intake photos, and repair diagnoses. It also provides a versioned JSON API that allows external clients to retrieve service prices and access repair information through authenticated requests.
+Wheelhouse is a Ruby on Rails application for a neighbourhood bicycle repair shop. It manages customers, bicycles, repairs, services, staff, intake photographs, and repair diagnoses. A versioned JSON API exposes service prices publicly and repair information through Bearer token authentication.
 
 ## Documentation
 
-The specification and design documents from Lab 3 are available here:
-
 - [User Stories](docs/user-stories.md)
 - [Domain Model](docs/domain-model.md)
-- [Decisions](docs/decisions.md)
+- [Design Decisions](docs/decisions.md)
 - [Wireframes](docs/wireframes.md)
-
-API documentation:
-
 - [API Reference](docs/api.md)
+- [Authorization and Permissions](docs/permissions.md)
 
-The API reference includes endpoint descriptions, authentication requirements, example JSON responses, error handling, and CORS restrictions.
+The API reference documents endpoints, authentication, response formats, errors, and CORS restrictions. The permissions document describes role-specific authorization and record-level access rules.
 
 ## Prerequisites
 
-Before running Wheelhouse, make sure the following are installed:
-
 - Ruby 4.0.4
-- Rails 8.0
+- Rails 8.1.4
 - Node.js 26.1.0
 - Yarn
 - PostgreSQL
 - libvips
 
-PostgreSQL must be running locally, and the PostgreSQL role used by the application must have permission to create databases.
+PostgreSQL must be running locally, and the configured database role must be able to create databases.
 
-Wheelhouse uses libvips to process intake photos and generate image variants such as thumbnails.
-
-### Installing libvips
-
-On macOS with Homebrew:
+Install libvips on macOS:
 
 ```bash
 brew install vips
 ```
 
-On Ubuntu/Debian:
+On Ubuntu or Debian:
 
 ```bash
 sudo apt update
 sudo apt install libvips
 ```
 
-You can verify that libvips is installed with:
+Verify installation:
 
 ```bash
 vips --version
@@ -66,8 +54,6 @@ cd webtech-wheelhouse
 
 ### 2. Install dependencies
 
-Install the Ruby and JavaScript dependencies:
-
 ```bash
 bundle install
 yarn install
@@ -75,48 +61,42 @@ yarn install
 
 ### 3. Configure Rails credentials
 
-Wheelhouse uses Rails encrypted credentials to store the API authentication token. The token is required to access protected API endpoints.
-
-On a fresh clone, create or edit the credentials file using:
+Wheelhouse stores the API Bearer token in Rails encrypted credentials. Create or edit the credentials file:
 
 ```bash
 EDITOR="nano" bin/rails credentials:edit
 ```
 
-Add the following entry:
+Add:
 
 ```yaml
 api_token: YOUR_SECRET_TOKEN
 ```
 
-Replace `YOUR_SECRET_TOKEN` with a securely generated token. You can generate a random token using:
+Generate a token using:
 
 ```bash
 bin/rails secret
 ```
 
-Copy the generated value into the credentials file. Save and exit the editor.
-
-**Important security considerations:**
-
-- Never commit the API token to Git.
-- Never commit `config/master.key`.
-- Do not include real API tokens in documentation or screenshots.
-- API tokens must only be transmitted through the `Authorization` header.
-
-Rails credentials are encrypted, allowing the application to retrieve the token without exposing it in source code.
-
-If you are using an existing encrypted credentials file, you must have its matching master key to edit or decrypt it. Otherwise, create a new credentials file and master key for your local environment.
+Use the generated value in place of `YOUR_SECRET_TOKEN`. Never commit the token or `config/master.key`. If an encrypted credentials file already exists, its matching master key is required to decrypt it.
 
 ### 4. Set up the database
 
-Make sure PostgreSQL is running. Create the database, run migrations, and load development seed data:
+With PostgreSQL running:
 
 ```bash
 bin/rails db:setup
 ```
 
-The seed data includes customers, bikes, staff, services, repairs, repair service lines, diagnoses, intake photos, and development user accounts.
+This creates the database, loads the schema, and populates development data. For an existing database, apply new migrations and run seeds separately:
+
+```bash
+bin/rails db:migrate
+bin/rails db:seed
+```
+
+Seeds include services, staff, user accounts, customers, bicycles, repairs, repair service lines, diagnoses, and intake photographs. The seeds are idempotent: rerunning them does not delete existing application records or reset existing user passwords. Repairs created by the seed script use stable `seed_key` identifiers; older matching demo repairs can be associated with those identifiers when an unambiguous match exists.
 
 ### 5. Start the application
 
@@ -124,9 +104,9 @@ The seed data includes customers, bikes, staff, services, repairs, repair servic
 bin/dev
 ```
 
-The application runs locally at `http://localhost:3000`.
+The application is available at `http://localhost:3000`.
 
-| Page | URL |
+| Page | Path |
 |---|---|
 | Home | `/` |
 | Repairs | `/repairs` |
@@ -138,37 +118,80 @@ The application runs locally at `http://localhost:3000`.
 | Register | `/registration/new` |
 | Password reset | `/passwords/new` |
 
-The repairs page displays intake-photo thumbnails and diagnosis excerpts. Pages other than the public service catalog and authentication-related pages require a signed-in user.
+The service catalog and authentication pages are publicly accessible. Other HTML resources require authentication and may have additional role-based restrictions.
+
+## Authentication and Authorization
+
+Wheelhouse uses Rails' native authentication system for browser sessions, registration, and password recovery. Passwords use `has_secure_password` with BCrypt and must be at least 10 characters long.
+
+Pundit enforces authorization through policies for customers, bikes, repairs, services, and staff. Policies deny access unless a permission is explicitly granted. Collection actions use policy scopes, while individual actions use record-level authorization. Authenticated users who lack permission receive HTTP `403 Forbidden`; unauthenticated visitors attempting to access protected pages are redirected to sign in.
+
+### Roles and permissions
+
+| Resource | Owner | Counter | Mechanic |
+|---|---|---|---|
+| Customers | Full access | View, create, update | No access |
+| Bikes | Full access | View, create, update | No access |
+| Repairs | Full access | View, create, update unless picked up | View assigned; update assigned unless picked up |
+| Services | Full access | Read only | Read only |
+| Staff | Full access | Read only | Read only |
+
+The service catalog's index and show pages are also public. Mechanics cannot create or delete repairs, access unassigned repairs, or access repairs assigned to another staff member. A mechanic without an associated staff record cannot access repairs through mechanic-specific permissions. Mechanic repair updates are limited to `status`, `diagnosis`, and `intake_photos`.
+
+Authorization is enforced on the server, independently of whether a navigation link, button, or form field is visible. For the complete action-level permissions matrix and implementation details, see [Authorization and Permissions](docs/permissions.md) and [Design Decisions](docs/decisions.md).
+
+### Registration and sessions
+
+New users can register at `/registration/new` using a unique email address, a password of at least 10 characters, and password confirmation. Email addresses are normalized to lowercase. Newly registered users receive the `counter` role without a staff association; registration does not permit selecting a role or staff member.
+
+Successful registration starts a session and queues a welcome email. After signing in, users are redirected to their originally requested page when applicable. The navigation bar displays the signed-in user's staff name or email address, role, and sign-out action. Signing out ends the session.
+
+### Development accounts
+
+Running `bin/rails db:seed` creates these accounts if they do not already exist:
+
+| Email | Password | Role | Staff |
+|---|---|---|---|
+| `hank@wheelhouse.cl` | `HankPassword123!` | Owner | Hank Schrader |
+| `walter@wheelhouse.cl` | `WalterPassword123!` | Mechanic | Walter White |
+| `jessie@wheelhouse.cl` | `JessiePassword123!` | Mechanic | Jessie Pinkman |
+| `scarlett@wheelhouse.cl` | `ScarlettPassword123!` | Counter | Scarlett Johansson |
+| `guest@wheelhouse.cl` | `GuestPassword123!` | Counter | None |
+
+These credentials are for local development and testing only. Existing passwords are not overwritten by subsequent seed runs. Demo repairs include assigned and unassigned work orders, multiple lifecycle states, completed and unfinished repairs, repair services, diagnoses, and intake photos.
+
+### Repair reception tracking
+
+New repairs record the authenticated user who received them through `Current.user`. This association is assigned server-side and cannot be modified through submitted repair parameters. The receiving user's staff name or email address appears in repair listings and detail pages when available. Older repairs without a recorded receiver remain valid.
+
+### Password recovery
+
+Users can request a reset at `/passwords/new`. If the account exists, Wheelhouse queues a reset email; the confirmation message does not reveal whether the submitted email is registered. Reset links expire after 15 minutes and become invalid after the password changes.
+
+In development, emails are written to `tmp/sent_emails/`, without requiring an external SMTP service. To test a reset, submit an existing email address, open the generated message, follow its local reset link, and enter a new password. Welcome and password-reset messages have HTML and plain-text versions. Development uses an asynchronous Active Job adapter for email delivery.
+
+Mailer previews are available at `/rails/mailers`, including `/rails/mailers/welcome_mailer/welcome`.
 
 ## JSON API
 
-Wheelhouse provides a versioned API under `http://localhost:3000/api/v1`.
-
-The API uses JSON for both successful responses and errors.
-
-### Available endpoints
+The versioned API is available under `http://localhost:3000/api/v1`. API controllers use `ActionController::API` and are separate from the HTML controllers. The API retains its Bearer token authentication independently of browser sessions and Pundit-based HTML authorization.
 
 | Method | Endpoint | Authentication | Description |
 |---|---|---|---|
-| GET | `/api/v1/services` | Public | List all services and prices |
-| GET | `/api/v1/services/:id` | Public | Retrieve a single service |
-| POST | `/api/v1/services` | Bearer token | Create a new service |
+| GET | `/api/v1/services` | Public | List services and prices |
+| GET | `/api/v1/services/:id` | Public | Retrieve one service |
+| POST | `/api/v1/services` | Bearer token | Create a service |
 | GET | `/api/v1/repairs` | Bearer token | List repairs |
-| GET | `/api/v1/repairs/:id` | Bearer token | Retrieve a single repair |
+| GET | `/api/v1/repairs/:id` | Bearer token | Retrieve one repair |
 
-The API controllers inherit from `ActionController::API` and are separate from the application's HTML controllers. The JSON API remains independent of browser session authentication; its existing routes and Bearer token requirements are unchanged.
-
-### Public API example
-
-To retrieve the service price list:
+### Public service requests
 
 ```bash
 curl -i http://localhost:3000/api/v1/services
+curl -i http://localhost:3000/api/v1/services/23
 ```
 
-No authentication is required. A successful request returns HTTP `200 OK` with a JSON array.
-
-Example:
+An example service response is:
 
 ```json
 [
@@ -181,27 +204,17 @@ Example:
 ]
 ```
 
-Prices are represented as decimal strings. The `repair_count` field is calculated from associated repair service records rather than stored as a database column.
-
-To retrieve a single service:
-
-```bash
-curl -i http://localhost:3000/api/v1/services/23
-```
+The values are illustrative. Prices are serialized as decimal strings, and `repair_count` is calculated from associated repair service records.
 
 ### Authenticated API requests
 
-Protected endpoints require a Bearer token. For local testing, store your token in a shell environment variable:
+Store your local API token in a shell variable:
 
 ```bash
 export WHEELHOUSE_TOKEN="YOUR_SECRET_TOKEN"
 ```
 
-Replace the placeholder with the token stored in Rails credentials. This variable is used only by the `curl` examples. Rails itself reads the token from encrypted credentials.
-
-**Do not commit this token or paste its actual value into the README.**
-
-To retrieve repairs:
+Retrieve repairs:
 
 ```bash
 curl -i \
@@ -209,7 +222,7 @@ curl -i \
   http://localhost:3000/api/v1/repairs
 ```
 
-To retrieve one repair:
+Retrieve one repair:
 
 ```bash
 curl -i \
@@ -217,7 +230,7 @@ curl -i \
   http://localhost:3000/api/v1/repairs/1
 ```
 
-To filter repairs by state:
+Filter by status:
 
 ```bash
 curl -i \
@@ -225,11 +238,9 @@ curl -i \
   "http://localhost:3000/api/v1/repairs?state=Ready"
 ```
 
-The `state` parameter must match a valid repair status. Invalid states return HTTP `400 Bad Request` with a JSON error.
+The `state` parameter must match a valid repair status. Invalid values return HTTP `400 Bad Request`.
 
-### Creating a service
-
-Creating a service requires authentication:
+### Create a service
 
 ```bash
 curl -i -X POST \
@@ -244,13 +255,11 @@ curl -i -X POST \
   }'
 ```
 
-A successful request returns HTTP `201 Created`, a JSON document describing the new service, and a `Location` header containing the new service's API URL.
+Successful creation returns HTTP `201 Created`, the new service as JSON, and a `Location` header. Invalid attributes return `422 Unprocessable Entity`; missing service attributes return `400 Bad Request`.
 
-Invalid attributes return HTTP `422 Unprocessable Entity`. Missing service attributes return HTTP `400 Bad Request`.
+### API error responses
 
-### API errors
-
-All API errors follow the same JSON structure:
+Errors use this structure:
 
 ```json
 {
@@ -263,184 +272,65 @@ All API errors follow the same JSON structure:
 | Status | Meaning |
 |---|---|
 | 200 | Successful GET request |
-| 201 | Service successfully created |
+| 201 | Service created |
 | 400 | Invalid request or parameters |
-| 401 | Missing or invalid authentication |
-| 404 | Requested record does not exist |
-| 422 | Service validation failed |
+| 401 | Missing or invalid API authentication |
+| 404 | Record not found |
+| 422 | Validation failure |
 
-For complete examples and field descriptions, see [docs/api.md](docs/api.md).
+For complete request and response examples, see [API Reference](docs/api.md).
 
-## API Security
+## API Security and CORS
 
-The API uses token-based authentication. Protected requests must provide:
+Protected API endpoints require an `Authorization: Bearer ...` header. The expected token is stored in Rails encrypted credentials and compared using a timing-safe method. API repair responses do not expose customer phone numbers or internal foreign keys.
 
-```http
-Authorization: Bearer YOUR_API_TOKEN
-```
-
-The expected token is stored in Rails encrypted credentials. The application uses timing-safe comparison when validating tokens.
-
-Authentication is required for reading repair collections, reading individual repairs, and creating services. Reading service information is public.
-
-The API does not expose customer phone numbers or internal foreign keys in its repair responses.
-
-## CORS Configuration
-
-Wheelhouse allows browser-based cross-origin requests from exactly two origins:
+Cross-origin browser access is restricted to:
 
 - `https://tjuur.github.io`
 - `http://localhost:8000`
 
-CORS is enabled only for public service GET endpoints. The protected repair endpoints and service creation endpoint are not exposed through CORS.
-
-Requests made using tools such as `curl` do not require CORS permissions.
+CORS is enabled only for public service GET endpoints. Protected repair endpoints and service creation are not exposed through CORS. Command-line tools such as `curl` are not subject to browser CORS restrictions.
 
 ## Personal Website Integration
 
-The public Wheelhouse price list is integrated into my personal website.
+The public Wheelhouse service catalog is integrated into a personal website:
 
-**Published website:**
+- Website: `https://tjuur.github.io/webtech-lab-01/`
+- Repository: `https://github.com/Tjuur/webtech-lab-01`
 
-*IMPORTANT NOTE: Please make sure to enable accessing external files from your browser for this to work.*
+The website uses the Fetch API to retrieve service names, prices, and repair counts. It supports loading and error states, service lookup by ID, and dynamically generated service rows. Responses are handled with `async`/`await`, `response.ok`, and safe DOM methods such as `createElement()` and `textContent()`.
 
-https://tjuur.github.io/webtech-lab-01/
+### Local integration testing
 
-**Website repository:**
-
-https://github.com/Tjuur/webtech-lab-01
-
-The website uses JavaScript's Fetch API to retrieve the public services collection.
-
-Its features include:
-
-- Dynamically generated service rows.
-- Formatted prices with two decimal places.
-- Loading and network-error messages.
-- HTTP error handling.
-- Service lookup by ID.
-- Display of service name, price, and repair count.
-
-The JavaScript uses `async/await` and checks `response.ok`.
-
-Service information is inserted using safe DOM methods such as `createElement()` and `textContent`, rather than HTML injection.
-
-### Testing the integration locally
-
-The personal website expects the Wheelhouse API to run on port `3000`.
-
-Start Wheelhouse in one terminal:
+Start Wheelhouse:
 
 ```bash
 cd webtech-wheelhouse
 bin/dev
 ```
 
-In a second terminal, navigate to the personal website repository:
+In a separate terminal, start a server from the personal website repository:
 
 ```bash
 cd webtech-lab-01
 python3 -m http.server 8000
 ```
 
-Open `http://localhost:8000` and scroll to the Wheelhouse section to see the service price list. You can also enter a service ID to retrieve its details.
-
-**Note:** The published GitHub Pages website also requests `http://localhost:3000`. Therefore, the Rails API must be running on the visitor's own computer for the price list to load. This integration is intended for local development and demonstration; the API is not publicly deployed.
+Open `http://localhost:8000` and navigate to the Wheelhouse section. The personal website requests the API at `http://localhost:3000`, so the Rails application must be running locally. The GitHub Pages integration is intended for local demonstration; the API is not publicly deployed.
 
 ## Uploaded Files
 
-In development, uploaded files are stored locally in the `storage/` directory using Active Storage. Files uploaded while using the application should not be committed to Git.
+Development uploads use Active Storage and are stored in `storage/`. Generated files and uploaded user content should not be committed to Git. Source images used for development seeds are kept under `db/seeds/`.
 
-Seed images used to create the development data are stored separately under `db/seeds/`.
+## Testing and Code Quality
 
-## User Authentication
-
-Wheelhouse uses Rails 8's native authentication system for browser sessions, user registration, and password recovery. User passwords are stored using `has_secure_password` and BCrypt, and must contain at least 10 characters.
-
-User roles are `owner`, `mechanic`, and `counter`. The default role is `counter`. Users may optionally be associated with a staff member, but each staff member can have at most one user account.
-
-### Public and Protected Pages
-
-Visitors can access the service catalog, sign-in page, registration page, and password recovery pages without authentication. All other HTML pages require an authenticated session.
-
-After signing in, users are redirected to the page they originally requested, when applicable. The navigation bar displays the authenticated user's staff name (or email address), role, and logout button. Logging out terminates the current session.
-
-The JSON API continues using its existing Bearer token authentication independently of browser sessions.
-
-### Registration
-
-New users can register at `http://localhost:3000/registration/new`.
-
-Registration requires an email address, password of at least 10 characters, and password confirmation. Email addresses are normalized to lowercase and must be unique.
-
-New accounts automatically receive the default `counter` role and have no associated staff member. The registration form does not accept role or staff assignments.
-
-Successful registration starts a session and queues a welcome email.
-
-### Seeded User Accounts
-
-Running `bin/rails db:seed` creates the following development accounts:
-
-| Email | Password | Role | Staff |
-|---|---|---|---|
-| hank@wheelhouse.cl | HankPassword123! | owner | Hank Schrader |
-| walter@wheelhouse.cl | WalterPassword123! | mechanic | Walter White |
-| jessie@wheelhouse.cl | JessiePassword123! | mechanic | Jessie Pinkman |
-| scarlett@wheelhouse.cl | ScarlettPassword123! | counter | Scarlett Johansson |
-| guest@wheelhouse.cl | GuestPassword123! | counter | None |
-
-These credentials are intended exclusively for local development and testing. Seeded users are preserved when seeds are run again, and existing passwords are not overwritten.
-
-The seed data also includes two repairs with different receiving users.
-
-**Note:** Running seeds recreates development customers, bikes, repairs, services, and their associated data.
-
-### Repair Reception Tracking
-
-Every newly created repair automatically records the authenticated user who received it. The receiver is assigned on the server using `Current.user` and cannot be modified through repair form parameters.
-
-The receiver's staff name or email address is displayed in the repair index and detail pages. Older repairs without a recorded receiver remain valid.
-
-### Password Recovery
-
-Users can request a password reset at `http://localhost:3000/passwords/new`.
-
-If an account exists for the submitted email address, Wheelhouse queues an email containing a password-reset link. The confirmation message is identical whether or not the email address belongs to an account.
-
-Password-reset links expire after 15 minutes and become invalid after the account password changes.
-
-### Local Email Delivery
-
-In development, Wheelhouse uses Rails' built-in file delivery method. No external email provider or SMTP credentials are required. Generated emails are saved in `tmp/sent_emails/`.
-
-To test password recovery:
-
-1. Start the application using `bin/dev`.
-2. Visit `/passwords/new`.
-3. Submit the email address of an existing account.
-4. Open the generated email file in `tmp/sent_emails/`.
-5. Copy the password-reset URL into your browser.
-6. Enter and confirm a new password.
-
-The reset URL uses `http://localhost:3000`. Welcome emails are queued automatically after successful registration. Both welcome and password-reset emails provide HTML and plaintext versions.
-
-Development uses the asynchronous Active Job adapter to process queued emails without a separate worker process.
-
-### Mailer Previews
-
-With the development server running, visit `http://localhost:3000/rails/mailers`.
-
-The welcome email preview is available at `http://localhost:3000/rails/mailers/welcome_mailer/welcome`.
-
-### Running Tests
-
-Run the complete Rails test suite:
+Run the full test suite:
 
 ```bash
 bin/rails test
 ```
 
-Run the welcome mailer test separately:
+Run the welcome mailer test:
 
 ```bash
 bin/rails test test/mailers/welcome_mailer_test.rb
@@ -451,3 +341,19 @@ Verify Rails autoloading:
 ```bash
 bin/rails zeitwerk:check
 ```
+
+Check Ruby formatting and lint rules:
+
+```bash
+bundle exec rubocop
+```
+
+Run the security scan:
+
+```bash
+bundle exec brakeman -q
+```
+
+The authorization test suite includes Pundit policy tests and HTTP integration tests for role permissions, repair assignments, completed repair restrictions, public access, and unauthorized requests.
+
+At the completion of Lab 12, the local checks reported 56 tests, 213 assertions, no test failures or errors, no RuboCop offenses, and no Brakeman security warnings.
